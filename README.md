@@ -18,7 +18,12 @@
 
 ## Getting Started
 
-### 1. Start the Postgres database
+### 1. Install dependencies
+
+- In root run `pnpm i`
+- In root/frontend run `pnpm i`
+
+### 2. Start the Postgres database
 
 Run a Postgres container via Podman
 
@@ -26,7 +31,7 @@ Run a Postgres container via Podman
 pnpm start:db
 ```
 
-### 2. Start the frontend & backend
+### 3. Start the frontend & backend
 
 ```bash
 pnpm start
