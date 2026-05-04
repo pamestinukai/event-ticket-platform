@@ -1,0 +1,14 @@
+{
+	"name": "event-ticket-platform",
+	"private": true,
+	"scripts": {
+		"start": "concurrently \"pnpm start:backend\" \"pnpm start:frontend\"",
+		"start:db": "podman run -d --name postgres -e POSTGRES_DB=db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:latest",
+		"start:backend": "cd backend && mvnw.cmd spring-boot:run",
+		"start:frontend": "cd frontend && pnpm dev"
+	},
+	"devDependencies": {
+		"concurrently": "^9.2.1"
+	},
+	"packageManager": "pnpm@9.15.9+sha512.68046141893c66fad01c079231128e9afb89ef87e2691d69e4d40eee228988295fd4682181bae55b58418c3a253bde65a505ec7c5f9403ece5cc3cd37dcf2531"
+}

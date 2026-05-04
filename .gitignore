@@ -1,0 +1,61 @@
+# ========================
+# Java / Maven (backend)
+# ========================
+backend/target/
+backend/.mvn/wrapper/maven-wrapper.jar
+!backend/.mvn/wrapper/maven-wrapper.properties
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+replay_pid*
+
+# Spring Boot
+backend/src/main/resources/application-local.properties
+backend/src/main/resources/application-secret.properties
+
+# ========================
+# Node / pnpm (frontend)
+# ========================
+frontend/node_modules/
+frontend/dist/
+frontend/.pnpm-store/
+frontend/.pnpm-debug.log*
+
+# Vite
+frontend/.vite/
+
+# ========================
+# IDE / Editor
+# ========================
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.project
+.classpath
+.settings/
+*.swp
+*.swo
+
+# ========================
+# OS
+# ========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ========================
+# Misc
+# ========================
+*.log
+.env
+.env.local
+.env.*.local
