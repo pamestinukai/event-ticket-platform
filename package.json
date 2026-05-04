@@ -3,7 +3,7 @@
 	"private": true,
 	"scripts": {
 		"start": "concurrently \"pnpm start:backend\" \"pnpm start:frontend\"",
-		"start:db": "podman run -d --name postgres -e POSTGRES_DB=db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:latest",
+		"start:db": "podman start postgres || podman run -d --name postgres -e POSTGRES_DB=db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:latest",
 		"start:backend": "cd backend && mvnw.cmd spring-boot:run",
 		"start:frontend": "cd frontend && pnpm dev"
 	},
