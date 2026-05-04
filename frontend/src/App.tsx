@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { getCount, incrementCount } from './api/';
+import { useEffect, useState } from "react";
+import { getCount, incrementCount } from "./api/";
 
 function App() {
   const [count, setCount] = useState<number | null>(null);
@@ -11,12 +11,14 @@ function App() {
   }, []);
 
   const handleIncrement = () => {
-    incrementCount().then(setCount).catch(() => setCount(null));
+    incrementCount()
+      .then(setCount)
+      .catch(() => setCount(null));
   };
 
   return (
     <>
-      <p>Count: {count ?? '...'}</p>
+      <p>Count: {count ?? "..."}</p>
       <button onClick={handleIncrement}>Increment</button>
     </>
   );
