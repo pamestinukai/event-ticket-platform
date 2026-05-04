@@ -1,26 +1,13 @@
-import { useEffect, useState } from "react";
-import { getCount, incrementCount } from "./api/";
+import { Box } from "@mui/material";
+import { Footer } from "./components/Footer/Footer";
+import { HomePage } from "./pages/HomePage/HomePage";
 
 function App() {
-  const [count, setCount] = useState<number | null>(null);
-
-  useEffect(() => {
-    getCount()
-      .then(setCount)
-      .catch(() => setCount(null));
-  }, []);
-
-  const handleIncrement = () => {
-    incrementCount()
-      .then(setCount)
-      .catch(() => setCount(null));
-  };
-
   return (
-    <>
-      <p>Count: {count ?? "..."}</p>
-      <button onClick={handleIncrement}>Increment</button>
-    </>
+    <Box sx={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+      <HomePage />
+      <Footer />
+    </Box>
   );
 }
 
