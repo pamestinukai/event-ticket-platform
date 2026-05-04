@@ -1,6 +1,3 @@
-# ========================
-# Java / Maven (backend)
-# ========================
 backend/target/
 backend/.mvn/wrapper/maven-wrapper.jar
 !backend/.mvn/wrapper/maven-wrapper.properties
@@ -16,9 +13,7 @@ replay_pid*
 backend/src/main/resources/application-local.properties
 backend/src/main/resources/application-secret.properties
 
-# ========================
-# Node / pnpm (frontend)
-# ========================
+node_modules/
 frontend/node_modules/
 frontend/dist/
 frontend/.pnpm-store/
@@ -27,9 +22,6 @@ frontend/.pnpm-debug.log*
 # Vite
 frontend/.vite/
 
-# ========================
-# IDE / Editor
-# ========================
 .idea/
 *.iml
 *.iws
@@ -45,16 +37,10 @@ frontend/.vite/
 *.swp
 *.swo
 
-# ========================
-# OS
-# ========================
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# ========================
-# Misc
-# ========================
 *.log
 .env
 .env.local
