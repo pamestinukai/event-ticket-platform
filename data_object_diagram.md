@@ -1,16 +1,28 @@
 # Data Object
 ```mermaid
 erDiagram
-    ORGANIZER ||--o{ EVENT : creates
-    ORGANIZER ||--o{ AUDIT_LOG : generates
-    ORGANIZER {
-        int organizer_id PK
+    ORGANIZATION ||--o{ EMPLOYEE : employs
+    ORGANIZATION ||--o{ EVENT : creates
+    ORGANIZATION {
+        int organization_id PK
+        int owner_id FK
+        int_array employee_ids FK
+        string company_name UK
+        boolean active
+        datetime created_at
+        datetime updated_at
+    }
+
+    EMPLOYEE ||--o{ AUDIT_LOG : generates
+    EMPLOYEE {
+        int employee_id PK
+        int organization_id FK
         string email UK
         string password_hash
-        string company_name
         string phone "nullable"
         boolean active
         datetime created_at
+        datetime updated_at
     }
 
     VENUE ||--o{ AUDITORIUM : contains
@@ -57,7 +69,7 @@ erDiagram
     EVENT }o--|| CATEGORY : belongs_to
     EVENT {
         int event_id PK
-        int organizer_id FK
+        int organization_id FK
         int venue_id FK
         int auditorium_id FK "nullable"
         int category_id FK
@@ -100,7 +112,6 @@ erDiagram
         int purchase_id PK
         string buyer_name
         string buyer_email
-        string buyer_phone "nullable"
         decimal total_amount
         string currency
         string payment_provider "STRIPE"
@@ -133,7 +144,6 @@ erDiagram
         int purchase_id FK
         int event_id FK
         string type "REMINDER|CANCELLATION|RESCHEDULE|CONFIRMATION"
-        string channel "EMAIL|SMS"
         string status "SCHEDULED|SENT|FAILED|CANCELED"
         datetime scheduled_at
         datetime sent_at "nullable"
@@ -141,7 +151,7 @@ erDiagram
 
     AUDIT_LOG {
         int audit_id PK
-        int organizer_id FK
+        int employee_id FK
         string entity_type "EVENT|TICKET_TYPE|SEAT_LAYOUT|AUDITORIUM"
         int entity_id
         string action "CREATE|UPDATE|DELETE"
