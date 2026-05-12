@@ -8,6 +8,7 @@ import java.util.List;
 public interface IEventService {
 
     List<Event> getEvents();
+    List<Event> getAvailableEvents();
     Event getEvent(Long id);
     Event createEvent(EventRequestDTO eventRequestDTO);
     Event updateEvent(Long id, EventRequestDTO eventRequestDTO);

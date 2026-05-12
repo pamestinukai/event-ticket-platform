@@ -4,6 +4,7 @@ import com.pamestinukai.backend.dtos.request.OrganizationRequestDTO;
 import com.pamestinukai.backend.dtos.response.OrganizationResponseDTO;
 import com.pamestinukai.backend.entities.Organization;
 import com.pamestinukai.backend.services.implementations.OrganizationService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -33,14 +34,14 @@ public class OrganizationController {
     }
 
     @PostMapping
-    public ResponseEntity<OrganizationResponseDTO> createOrganization(@RequestBody OrganizationRequestDTO organizationRequestDTO) {
+    public ResponseEntity<OrganizationResponseDTO> createOrganization(@Valid @RequestBody OrganizationRequestDTO organizationRequestDTO) {
         Organization organization = organizationService.createOrganization(organizationRequestDTO);
         OrganizationResponseDTO organizationResponseDTO = mapToDTO(organization);
         return ResponseEntity.status(201).body(organizationResponseDTO);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<OrganizationResponseDTO> updateOrganization(@PathVariable Long id, @RequestBody OrganizationRequestDTO organizationRequestDTO) {
+    public ResponseEntity<OrganizationResponseDTO> updateOrganization(@PathVariable Long id, @Valid @RequestBody OrganizationRequestDTO organizationRequestDTO) {
         Organization organization = organizationService.updateOrganization(id, organizationRequestDTO);
         OrganizationResponseDTO organizationResponseDTO = mapToDTO(organization);
         return ResponseEntity.ok(organizationResponseDTO);

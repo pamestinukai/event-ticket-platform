@@ -2,6 +2,7 @@ package com.pamestinukai.backend.services.implementations;
 
 import com.pamestinukai.backend.dtos.request.OrganizationRequestDTO;
 import com.pamestinukai.backend.entities.Organization;
+import com.pamestinukai.backend.exceptions.ResourceNotFoundException;
 import com.pamestinukai.backend.repositories.EmployeeRepository;
 import com.pamestinukai.backend.repositories.OrganizationRepository;
 import com.pamestinukai.backend.services.interfaces.IOrganizationService;
@@ -20,12 +21,15 @@ public class OrganizationService implements IOrganizationService {
     private final OrganizationRepository organizationRepository;
     private final EmployeeRepository employeeRepository;
 
+    @Transactional(readOnly = true)
     public List<Organization> getAllOrganizations(){
         return organizationRepository.findAll();
     }
+
+    @Transactional(readOnly = true)
     public Organization getOrganizationById(Long id){
         return organizationRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Organization not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Organization not found"));
     }
     public Organization createOrganization(OrganizationRequestDTO organizationRequestDTO){
         Organization organization = mapToEntity(new Organization(), organizationRequestDTO);
@@ -35,12 +39,15 @@ public class OrganizationService implements IOrganizationService {
     }
     public Organization updateOrganization(Long id, OrganizationRequestDTO organizationRequestDTO){
         Organization organization = organizationRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Organization not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Organization not found"));
         mapToEntity(organization, organizationRequestDTO);
         organization.setUpdatedAt(LocalDateTime.now());
         return organizationRepository.save(organization);
     }
     public void deleteOrganization(Long id){
+        if (!organizationRepository.existsById(id)){
+            throw new ResourceNotFoundException("Organization not found");
+        }
         organizationRepository.deleteById(id);
     }
 
@@ -49,7 +56,7 @@ public class OrganizationService implements IOrganizationService {
         organization.setActive(dto.isActive());
         if (dto.getOwnerId() != null)
             organization.setOwner(employeeRepository.findById(dto.getOwnerId())
-                                .orElseThrow(() -> new RuntimeException("Owner not found")));
+                                .orElseThrow(() -> new ResourceNotFoundException("Owner not found")));
         return organization;
     }
 }

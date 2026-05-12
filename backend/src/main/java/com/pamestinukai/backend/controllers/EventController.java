@@ -4,6 +4,7 @@ import com.pamestinukai.backend.dtos.request.EventRequestDTO;
 import com.pamestinukai.backend.dtos.response.EventResponseDTO;
 import com.pamestinukai.backend.entities.Event;
 import com.pamestinukai.backend.services.interfaces.IEventService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
@@ -26,6 +27,15 @@ public class EventController {
         return ResponseEntity.ok(eventResponseDTOS);
     }
 
+    @GetMapping("/available")
+    public ResponseEntity<List<EventResponseDTO>> getAvailableEvents() {
+        List<Event> events = eventService.getAvailableEvents();
+        List<EventResponseDTO> eventResponseDTOS = events.stream()
+                .map(this::mapToDTO)
+                .toList();
+        return ResponseEntity.ok(eventResponseDTOS);
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<EventResponseDTO> getEventById(@PathVariable Long id) {
         Event event = eventService.getEvent(id);
@@ -33,13 +43,13 @@ public class EventController {
     }
 
     @PostMapping
-    public ResponseEntity<EventResponseDTO> createEvent(@RequestBody EventRequestDTO eventRequestDTO) {
+    public ResponseEntity<EventResponseDTO> createEvent(@Valid @RequestBody EventRequestDTO eventRequestDTO) {
         Event event = eventService.createEvent(eventRequestDTO);
         return ResponseEntity.status(201).body(mapToDTO(event));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<EventResponseDTO> updateEvent(@PathVariable Long id, @RequestBody EventRequestDTO eventRequestDTO) {
+    public ResponseEntity<EventResponseDTO> updateEvent(@PathVariable Long id, @Valid @RequestBody EventRequestDTO eventRequestDTO) {
         Event event = eventService.updateEvent(id, eventRequestDTO);
         return ResponseEntity.ok(mapToDTO(event));
     }

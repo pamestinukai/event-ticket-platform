@@ -2,6 +2,7 @@ package com.pamestinukai.backend.services.implementations;
 
 import com.pamestinukai.backend.dtos.request.EventRequestDTO;
 import com.pamestinukai.backend.entities.Event;
+import com.pamestinukai.backend.exceptions.ResourceNotFoundException;
 import com.pamestinukai.backend.repositories.*;
 import com.pamestinukai.backend.services.interfaces.IEventService;
 import lombok.RequiredArgsConstructor;
@@ -28,12 +29,22 @@ public class EventService implements IEventService {
     }
 
     @Transactional(readOnly = true)
+    public List<Event> getAvailableEvents(){
+        List<Event.EventStatus> availableStatuses = List.of(
+                Event.EventStatus.PUBLISHED,
+                Event.EventStatus.RESCHEDULED
+        );
+        return eventRepository.findByStatusIn(availableStatuses);
+    }
+
+    @Transactional(readOnly = true)
     public Event getEvent(Long id){
         return eventRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Event not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
     }
 
     public Event createEvent(EventRequestDTO eventRequestDTO){
+        validateEventTime(eventRequestDTO);
         Event event = mapToEntity(new Event(), eventRequestDTO);
         event.setCreatedAt(LocalDateTime.now());
         event.setUpdatedAt(LocalDateTime.now());
@@ -41,6 +52,7 @@ public class EventService implements IEventService {
     }
 
     public Event updateEvent(Long id, EventRequestDTO eventRequestDTO){
+        validateEventTime(eventRequestDTO);
         Event event = getEvent(id);
         mapToEntity(event, eventRequestDTO);
         event.setUpdatedAt(LocalDateTime.now());
@@ -48,6 +60,9 @@ public class EventService implements IEventService {
     }
 
     public void deleteEvent(Long id){
+        if (!eventRepository.existsById(id)){
+            throw new ResourceNotFoundException("Event not found");
+        }
         eventRepository.deleteById(id);
     }
 
@@ -62,20 +77,26 @@ public class EventService implements IEventService {
 
         if (dto.getOrganizationId() != null)
             event.setOrganization(organizationRepository.findById(dto.getOrganizationId())
-                    .orElseThrow(() -> new RuntimeException("Organization not found")));
+                    .orElseThrow(() -> new ResourceNotFoundException("Organization not found")));
 
         if (dto.getVenueId() != null)
             event.setVenue(venueRepository.findById(dto.getVenueId())
-                    .orElseThrow(() -> new RuntimeException("Venue not found")));
+                    .orElseThrow(() -> new ResourceNotFoundException("Venue not found")));
 
         if (dto.getAuditoriumId() != null)
             event.setAuditorium(auditoriumRepository.findById(dto.getAuditoriumId())
-                    .orElseThrow(() -> new RuntimeException("Auditorium not found")));
+                    .orElseThrow(() -> new ResourceNotFoundException("Auditorium not found")));
 
         if (dto.getCategoryId() != null)
             event.setCategory(categoryRepository.findById(dto.getCategoryId())
-                    .orElseThrow(() -> new RuntimeException("Category not found")));
+                    .orElseThrow(() -> new ResourceNotFoundException("Category not found")));
 
         return event;
+    }
+
+    private void validateEventTime(EventRequestDTO dto){
+        if(dto.getStartDatetime().isAfter(dto.getEndDatetime())){
+            throw new IllegalArgumentException("Start datetime must be before end datetime");
+        }
     }
 }
