@@ -22,6 +22,14 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+
+        boolean manualInit = List.of(args).contains("--init-data");
+
+        if (!manualInit) {
+            return;
+        }
+
+        // if there are rows in events repository then initialization is skipped
         if (eventRepository.count() > 0) return;
 
         // --- Categories ---
