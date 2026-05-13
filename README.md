@@ -37,6 +37,12 @@ pnpm start:db
 pnpm start
 ```
 
+Or start with sample data:
+
+```bash
+pnpm start:data-init
+```
+
 The API will be available at `http://localhost:8080`.
 
 The app will be available at `http://localhost:5173`.

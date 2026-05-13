@@ -5,7 +5,9 @@
 		"start": "concurrently \"pnpm start:backend\" \"pnpm start:frontend\"",
 		"start:db": "podman start postgres || podman run -d --name postgres -e POSTGRES_DB=db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:latest",
 		"start:backend": "cd backend && mvnw.cmd spring-boot:run",
-		"start:frontend": "cd frontend && pnpm dev"
+		"start:frontend": "cd frontend && pnpm dev",
+		"start:backend:data-init": "cd backend && mvnw.cmd spring-boot:run -Dspring-boot.run.arguments=--init-data",
+		"start:data-init": "concurrently \"pnpm start:backend:data-init\" \"pnpm start:frontend\""
 	},
 	"devDependencies": {
 		"concurrently": "^9.2.1"
