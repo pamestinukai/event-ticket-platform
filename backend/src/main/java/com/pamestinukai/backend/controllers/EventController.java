@@ -1,6 +1,7 @@
 package com.pamestinukai.backend.controllers;
 
 import com.pamestinukai.backend.dtos.request.EventRequestDTO;
+import com.pamestinukai.backend.dtos.request.EventFilterRequestDTO;
 import com.pamestinukai.backend.dtos.response.EventResponseDTO;
 import com.pamestinukai.backend.entities.Event;
 import com.pamestinukai.backend.services.interfaces.IEventService;
@@ -8,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Page;
 
 import java.util.List;
 
@@ -25,6 +27,12 @@ public class EventController {
                 .map(this::mapToDTO)
                 .toList();
         return ResponseEntity.ok(eventResponseDTOS);
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<Page<Event>> searchEvents(
+            @ModelAttribute EventFilterRequestDTO filter) {
+        return ResponseEntity.ok(eventService.searchEvents(filter));
     }
 
     @GetMapping("/available")
