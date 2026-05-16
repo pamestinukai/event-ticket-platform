@@ -7,24 +7,28 @@ import App from "./App.tsx";
 const theme = createTheme({
   palette: {
     primary: {
-      main: "#1976d2",
+      main: "#2563eb",
+      dark: "#1d4ed8",
+      light: "#6b8ec7",
     },
     background: {
-      default: "#dff4ff",
+      default: "#dfe4f0",
       paper: "#ffffff",
     },
+    divider: "#e5e7eb",
   },
   shape: {
     borderRadius: 16,
   },
   components: {
-    MuiButton: {
+    MuiOutlinedInput: {
       styleOverrides: {
-        containedPrimary: {
-          backgroundColor: "#1976d2",
-          "&:hover": {
-            backgroundColor: "#1565c0",
-          },
+        notchedOutline: {
+          borderColor: "#e5e7eb",
+        },
+        input: {
+          paddingTop: "10px",
+          paddingBottom: "10px",
         },
       },
     },

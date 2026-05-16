@@ -4,6 +4,7 @@ import com.pamestinukai.backend.entities.*;
 import com.pamestinukai.backend.repositories.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
@@ -19,6 +20,7 @@ public class DataInitializer implements CommandLineRunner {
     private final AuditoriumRepository auditoriumRepository;
     private final CategoryRepository categoryRepository;
     private final EventRepository eventRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args) {
@@ -51,7 +53,7 @@ public class DataInitializer implements CommandLineRunner {
         // --- org Owners---
         Employee owner1 = new Employee();
         owner1.setEmail("owner1@livenation.com");
-        owner1.setPasswordHash("hashed_password_1");
+        owner1.setPasswordHash(passwordEncoder.encode("password1"));
         owner1.setPhone("+37061111111");
         owner1.setActive(true);
         owner1.setCreatedAt(LocalDateTime.now());
@@ -60,7 +62,7 @@ public class DataInitializer implements CommandLineRunner {
 
         Employee owner2 = new Employee();
         owner2.setEmail("owner2@eventpro.com");
-        owner2.setPasswordHash("hashed_password_2");
+        owner2.setPasswordHash(passwordEncoder.encode("password2"));
         owner2.setPhone("+37062222222");
         owner2.setActive(true);
         owner2.setCreatedAt(LocalDateTime.now());
