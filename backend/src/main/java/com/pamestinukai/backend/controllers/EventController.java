@@ -21,18 +21,11 @@ public class EventController {
     private final IEventService eventService;
 
     @GetMapping
-    public ResponseEntity<List<EventResponseDTO>> getAllEvents() {
-        List<Event> events = eventService.getEvents();
-        List<EventResponseDTO> eventResponseDTOS = events.stream()
-                .map(this::mapToDTO)
-                .toList();
-        return ResponseEntity.ok(eventResponseDTOS);
-    }
-
-    @GetMapping("/search")
-    public ResponseEntity<Page<Event>> searchEvents(
+    public ResponseEntity<Page<EventResponseDTO>> getAllEvents(
             @ModelAttribute EventFilterRequestDTO filter) {
-        return ResponseEntity.ok(eventService.searchEvents(filter));
+        return ResponseEntity.ok(
+                eventService.getEvents(filter).map(this::mapToDTO)
+        );
     }
 
     @GetMapping("/available")

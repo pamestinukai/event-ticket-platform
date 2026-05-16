@@ -28,11 +28,6 @@ public class EventService implements IEventService {
     private final CategoryRepository categoryRepository;
 
     @Transactional(readOnly = true)
-    public List<Event> getEvents(){
-        return eventRepository.findAll();
-    }
-
-    @Transactional(readOnly = true)
     public List<Event> getAvailableEvents(){
         List<Event.EventStatus> availableStatuses = List.of(
                 Event.EventStatus.PUBLISHED,
@@ -48,7 +43,7 @@ public class EventService implements IEventService {
     }
 
     @Transactional(readOnly = true)
-    public Page<Event> searchEvents(EventFilterRequestDTO filter) {
+    public Page<Event> getEvents(EventFilterRequestDTO filter) {
         if (StringUtils.hasText(filter.getPerformer())) {
             Pageable pageable = PageRequest.of(filter.getPage(), filter.getSize());
             return eventRepository.findByPerformer(filter.getPerformer(), pageable);
