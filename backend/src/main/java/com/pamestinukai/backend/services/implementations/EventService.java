@@ -28,11 +28,6 @@ public class EventService implements IEventService {
     private final CategoryRepository categoryRepository;
 
     @Transactional(readOnly = true)
-    public List<Event> getEvents(){
-        return eventRepository.findAll();
-    }
-
-    @Transactional(readOnly = true)
     public List<Event> getAvailableEvents(){
         List<Event.EventStatus> availableStatuses = List.of(
                 Event.EventStatus.PUBLISHED,

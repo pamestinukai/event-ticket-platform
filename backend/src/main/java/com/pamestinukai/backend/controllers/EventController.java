@@ -20,6 +20,7 @@ import java.util.List;
 public class EventController {
 
     private final IEventService eventService;
+    private final EventResponseMapper eventResponseMapper;
 
     @GetMapping
     public ResponseEntity<Page<EventResponseDTO>> getAllEvents(
@@ -66,24 +67,5 @@ public class EventController {
     public ResponseEntity<EventResponseDTO> deleteEvent(@PathVariable Long id) {
         eventService.deleteEvent(id);
         return ResponseEntity.noContent().build();
-    }
-
-    private EventResponseDTO mapToDTO(Event event){
-        EventResponseDTO dto = new EventResponseDTO();
-        dto.setEventId(event.getEventId());
-        dto.setTitle(event.getTitle());
-        dto.setDescription(event.getDescription());
-        dto.setPerformers(event.getPerformers());
-        dto.setImages(event.getImages());
-        dto.setStartDatetime(event.getStartDatetime());
-        dto.setEndDatetime(event.getEndDatetime());
-        dto.setStatus(event.getStatus());
-        dto.setCreatedAt(event.getCreatedAt());
-        dto.setUpdatedAt(event.getUpdatedAt());
-        dto.setOrganizationName(event.getOrganization().getCompanyName());
-        dto.setVenueName(event.getVenue().getName());
-        dto.setAuditoriumName(event.getAuditorium().getName());
-        dto.setCategoryName(event.getCategory().getName());
-        return dto;
     }
 }
