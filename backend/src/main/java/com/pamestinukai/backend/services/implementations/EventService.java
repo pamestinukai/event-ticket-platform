@@ -43,6 +43,16 @@ public class EventService implements IEventService {
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
     }
 
+    @Transactional(readOnly = true)
+    public Event getAvailableEvent(Long id){
+        List<Event.EventStatus> availableStatuses = List.of(
+                Event.EventStatus.PUBLISHED,
+                Event.EventStatus.RESCHEDULED
+        );
+        return eventRepository.findByEventIdAndStatusIn(id, availableStatuses)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found or not available"));
+    }
+
     public Event createEvent(EventRequestDTO eventRequestDTO){
         validateEventTime(eventRequestDTO);
         Event event = mapToEntity(new Event(), eventRequestDTO);

@@ -6,6 +6,7 @@ import { Footer } from "./components/Footer/Footer";
 import { HomePage } from "./pages/HomePage/HomePage";
 import { Auth } from "./pages/Auth/Auth";
 import { Dashboard } from "./pages/Dashboard/Dashboard";
+import { EventPage } from "./pages/Event/Event.tsx"
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
           <Routes>
             <Route path="/" element={<><HomePage /><Footer /></>} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/event/:id" element={<EventPage />} />
             <Route element={<ProtectedLayout />}>
               <Route path="/dashboard" element={<Dashboard />} />
             </Route>

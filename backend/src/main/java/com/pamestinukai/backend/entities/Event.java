@@ -36,6 +36,8 @@ public class Event {
     private Category category;
 
     private String title;
+
+    @Column(columnDefinition = "TEXT")
     private String description;
 
     @JdbcTypeCode(SqlTypes.ARRAY)

@@ -6,6 +6,7 @@ import com.pamestinukai.backend.entities.Organization;
 import com.pamestinukai.backend.services.implementations.OrganizationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import com.pamestinukai.backend.mappers.OrganizationResponseMapper;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,12 +17,13 @@ import java.util.List;
 @RequestMapping("/api/organizations")
 public class OrganizationController {
     private final OrganizationService organizationService;
+    private final OrganizationResponseMapper organizationResponseMapper;
 
     @GetMapping
     public ResponseEntity<List<OrganizationResponseDTO>> getAllOrganizations() {
         List<Organization> organizations = organizationService.getAllOrganizations();
         List<OrganizationResponseDTO> organizationResponseDTOS = organizations.stream()
-                .map(this::mapToDTO)
+                .map(organizationResponseMapper::toDTO)
                 .toList();
         return ResponseEntity.ok(organizationResponseDTOS);
     }
@@ -29,21 +31,21 @@ public class OrganizationController {
     @GetMapping("/{id}")
     public ResponseEntity<OrganizationResponseDTO> getOrganizationById(@PathVariable Long id) {
         Organization organization = organizationService.getOrganizationById(id);
-        OrganizationResponseDTO organizationResponseDTO = mapToDTO(organization);
+        OrganizationResponseDTO organizationResponseDTO = organizationResponseMapper.toDTO(organization);
         return ResponseEntity.ok(organizationResponseDTO);
     }
 
     @PostMapping
     public ResponseEntity<OrganizationResponseDTO> createOrganization(@Valid @RequestBody OrganizationRequestDTO organizationRequestDTO) {
         Organization organization = organizationService.createOrganization(organizationRequestDTO);
-        OrganizationResponseDTO organizationResponseDTO = mapToDTO(organization);
+        OrganizationResponseDTO organizationResponseDTO = organizationResponseMapper.toDTO(organization);
         return ResponseEntity.status(201).body(organizationResponseDTO);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<OrganizationResponseDTO> updateOrganization(@PathVariable Long id, @Valid @RequestBody OrganizationRequestDTO organizationRequestDTO) {
         Organization organization = organizationService.updateOrganization(id, organizationRequestDTO);
-        OrganizationResponseDTO organizationResponseDTO = mapToDTO(organization);
+        OrganizationResponseDTO organizationResponseDTO = organizationResponseMapper.toDTO(organization);
         return ResponseEntity.ok(organizationResponseDTO);
     }
 
@@ -51,18 +53,5 @@ public class OrganizationController {
     public ResponseEntity<OrganizationResponseDTO> deleteOrganization(@PathVariable Long id) {
         organizationService.deleteOrganization(id);
         return ResponseEntity.noContent().build();
-    }
-
-    private OrganizationResponseDTO mapToDTO(Organization organization) {
-        OrganizationResponseDTO organizationResponseDTO = new OrganizationResponseDTO();
-
-        organizationResponseDTO.setId(organization.getOrganizationId());
-        organizationResponseDTO.setCompanyName(organization.getCompanyName());
-        organizationResponseDTO.setOwnerEmail(organization.getOwner().getEmail());
-        organizationResponseDTO.setActive(organization.getOwner().isActive());
-        organizationResponseDTO.setCreatedAt(organization.getCreatedAt());
-        organizationResponseDTO.setUpdatedAt(organization.getUpdatedAt());
-
-        return organizationResponseDTO;
     }
 }

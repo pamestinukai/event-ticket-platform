@@ -7,6 +7,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -19,6 +20,7 @@ public class DataInitializer implements CommandLineRunner {
     private final VenueRepository venueRepository;
     private final AuditoriumRepository auditoriumRepository;
     private final CategoryRepository categoryRepository;
+    private final TicketTypeRepository ticketTypeRepository;
     private final EventRepository eventRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -130,7 +132,25 @@ public class DataInitializer implements CommandLineRunner {
         // --- Events ---
         Event event1 = new Event();
         event1.setTitle("Rock Night 2026");
-        event1.setDescription("The biggest rock concert of the year featuring top bands.");
+        event1.setDescription("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam at bibendum felis." +
+                " Integer sapien libero, congue nec pretium vitae, fermentum a ex." +
+                " In id mattis ipsum. Mauris posuere lectus magna. Cras id erat et felis dapibus tempor. " +
+                "Praesent auctor quam sed venenatis ultrices. Aenean vel finibus mauris. " +
+                "Phasellus pellentesque imperdiet diam nec blandit. Suspendisse in imperdiet justo, vitae consectetur lacus. Nunc\n" +
+                "\n" +
+                "luctus tortor mi, vel viverra tortor efficitur eu. Nulla consequat vulputate pharetra. Proin at risus fermentum," +
+                " finibus nibh sit amet, consectetur orci. Vestibulum malesuada felis ex, sagittis commodo elit sodales quis. " +
+                "Proin tempus tristique mi, aliquet tempus erat rutrum vitae. Morbi lectus ipsum, tincidunt nec efficitur eu, " +
+                "vulputate sit amet ipsum. Sed scelerisque pharetra nisl. Nunc molestie purus ut turpis fringilla, " +
+                "pharetra aliquet nisl iaculis. Sed ut ligula id lorem convallis dictum. Vestibulum ultrices, elit ac pulvinar malesuada," +
+                " nisl velit porta eros, sed pellentesque nibh felis non diam. Mauris malesuada suscipit est sit amet dictum. Quisque quis " +
+                "elementum dui. Donec varius erat in lacus feugiat posuere. Praesent quis rutrum nisi. Interdum et malesuada fames ac ante" +
+                " ipsum primis in faucibus. Suspendisse mi turpis, porttitor et ullamcorper quis, iaculis eget quam. " +
+                "Maecenas placerat accumsan orci, sed ultricies dolor sodales facilisis. Aenean nec orci eu dui bibendum sodales ut ac neque." +
+                " Etiam vel dui euismod, viverra enim sit amet, feugiat diam. Sed sollicitudin metus ac leo efficitur auctor." +
+                " Fusce at neque sapien. Suspendisse et aliquam tortor, ut faucibus felis. In hac habitasse platea dictumst." +
+                " Proin finibus mollis velit at hendrerit. Maecenas vitae turpis augue. Etiam eget metus ipsum." +
+                " Quisque scelerisque faucibus venenatis. Nullam sed vestibulum dui. Pellentesque ultricies dolor a justo dignissim accumsan. ");
         event1.setOrganization(org1);
         event1.setVenue(venue1);
         event1.setAuditorium(aud1);
@@ -175,6 +195,65 @@ public class DataInitializer implements CommandLineRunner {
         event3.setCreatedAt(LocalDateTime.now());
         event3.setUpdatedAt(LocalDateTime.now());
         eventRepository.save(event3);
+
+        // --- Ticket Types for Rock Night 2026 ---
+        TicketType rockVip = new TicketType();
+        rockVip.setEvent(event1);
+        rockVip.setName("VIP");
+        rockVip.setPrice(new BigDecimal("149.99"));
+        rockVip.setTotalQuantity(200);
+        rockVip.setAvailableQuantity(200);
+        ticketTypeRepository.save(rockVip);
+
+        TicketType rockStanding = new TicketType();
+        rockStanding.setEvent(event1);
+        rockStanding.setName("Standing");
+        rockStanding.setPrice(new BigDecimal("49.99"));
+        rockStanding.setTotalQuantity(5000);
+        rockStanding.setAvailableQuantity(5000);
+        ticketTypeRepository.save(rockStanding);
+
+        TicketType rockSeated = new TicketType();
+        rockSeated.setEvent(event1);
+        rockSeated.setName("Seated");
+        rockSeated.setPrice(new BigDecimal("79.99"));
+        rockSeated.setTotalQuantity(3000);
+        rockSeated.setAvailableQuantity(3000);
+        ticketTypeRepository.save(rockSeated);
+
+        // --- Ticket Types for Basketball Championship ---
+        TicketType basketballVip = new TicketType();
+        basketballVip.setEvent(event2);
+        basketballVip.setName("VIP");
+        basketballVip.setPrice(new BigDecimal("99.99"));
+        basketballVip.setTotalQuantity(100);
+        basketballVip.setAvailableQuantity(100);
+        ticketTypeRepository.save(basketballVip);
+
+        TicketType basketballGeneral = new TicketType();
+        basketballGeneral.setEvent(event2);
+        basketballGeneral.setName("General Admission");
+        basketballGeneral.setPrice(new BigDecimal("29.99"));
+        basketballGeneral.setTotalQuantity(8000);
+        basketballGeneral.setAvailableQuantity(8000);
+        ticketTypeRepository.save(basketballGeneral);
+
+        // --- Ticket Types for Hamlet ---
+        TicketType hamletPremium = new TicketType();
+        hamletPremium.setEvent(event3);
+        hamletPremium.setName("Premium");
+        hamletPremium.setPrice(new BigDecimal("59.99"));
+        hamletPremium.setTotalQuantity(500);
+        hamletPremium.setAvailableQuantity(500);
+        ticketTypeRepository.save(hamletPremium);
+
+        TicketType hamletStandard = new TicketType();
+        hamletStandard.setEvent(event3);
+        hamletStandard.setName("Standard");
+        hamletStandard.setPrice(new BigDecimal("29.99"));
+        hamletStandard.setTotalQuantity(2000);
+        hamletStandard.setAvailableQuantity(2000);
+        ticketTypeRepository.save(hamletStandard);
 
         System.out.println("Data initialized successfully");
     }
