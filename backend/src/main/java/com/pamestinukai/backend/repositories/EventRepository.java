@@ -11,10 +11,12 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecificationExecutor<Event> {
     List<Event> findByStatusIn(List<Event.EventStatus> statuses);
+    Optional<Event> findByEventIdAndStatusIn(Long eventId, List<Event.EventStatus> statuses);
     @Query(value = """
     SELECT * FROM events
     WHERE EXISTS (

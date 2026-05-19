@@ -12,6 +12,7 @@ public interface IEventService {
     Page<Event> getEvents(EventFilterRequestDTO filter);
     List<Event> getAvailableEvents();
     Event getEvent(Long id);
+    Event getAvailableEvent(Long id);
     Event createEvent(EventRequestDTO eventRequestDTO);
     Event updateEvent(Long id, EventRequestDTO eventRequestDTO);
     void deleteEvent(Long id);

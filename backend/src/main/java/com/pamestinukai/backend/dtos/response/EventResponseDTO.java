@@ -3,6 +3,8 @@ package com.pamestinukai.backend.dtos.response;
 import com.pamestinukai.backend.entities.Event;
 import lombok.Getter;
 import lombok.Setter;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -20,8 +22,9 @@ public class EventResponseDTO {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    private String organizationName;
-    private String venueName;
+    private BigDecimal startingTicketPrice;
+    private OrganizationResponseDTO organization;
+    private VenueResponseDTO venue;
     private String auditoriumName;
     private String categoryName;
 }
