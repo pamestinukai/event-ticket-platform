@@ -11,12 +11,16 @@ export function Header() {
         }}>
             <Toolbar sx={{ justifyContent: "space-between" }}>
 
-                <Typography variant="h6" sx={{ fontWeight: 700, color: "text.primary" }}>
+                <Typography
+                    variant="h6"
+                    sx={{ fontWeight: 700, color: "text.primary", cursor: "pointer" }}
+                    onClick={() => navigate("/")}
+                >
                     Pamestinukai
                 </Typography>
 
                 <Box sx={{ display: "flex", gap: 2 }}>
-                    <Button sx={{ color: "text.primary" }}>Events</Button>
+                    <Button sx={{ color: "text.primary" }} onClick={() => navigate("/")}>Events</Button>
                     <Button sx={{ color: "text.primary" }}>About</Button>
                     <Button variant="contained" onClick={() => navigate("/auth")}>Sign In</Button>
                 </Box>

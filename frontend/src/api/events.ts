@@ -20,6 +20,14 @@ export async function getEventById(id: string, token?: string): Promise<EventRes
     return await response.json();
 }
 
+export async function getAvailableEvents(): Promise<EventResponse[]> {
+    const res = await fetch(`${API_BASE_URL}/api/events/public/available`);
+    if (!res.ok) {
+        throw new Error("Failed to load events");
+    }
+    return res.json();
+}
+
 export async function getMyEvents(token: string): Promise<EventResponse[]> {
     const res = await fetch(`${API_BASE_URL}/api/events/mine?sortBy=startDatetime&sortDir=desc&size=100`, {
         headers: { Authorization: `Bearer ${token}` },
