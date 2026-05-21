@@ -2,12 +2,14 @@ package com.pamestinukai.backend.controllers;
 
 import com.pamestinukai.backend.dtos.request.OrganizationRequestDTO;
 import com.pamestinukai.backend.dtos.response.OrganizationResponseDTO;
+import com.pamestinukai.backend.entities.Employee;
 import com.pamestinukai.backend.entities.Organization;
 import com.pamestinukai.backend.services.implementations.OrganizationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import com.pamestinukai.backend.mappers.OrganizationResponseMapper;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,6 +28,14 @@ public class OrganizationController {
                 .map(organizationResponseMapper::toDTO)
                 .toList();
         return ResponseEntity.ok(organizationResponseDTOS);
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<OrganizationResponseDTO> getMyOrganization(@AuthenticationPrincipal Employee employee) {
+        if (employee == null || employee.getOrganization() == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(organizationResponseMapper.toDTO(employee.getOrganization()));
     }
 
     @GetMapping("/{id}")

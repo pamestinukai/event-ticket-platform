@@ -5,10 +5,9 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class VenueResponseDTO {
+public class AuditoriumResponseDTO {
     private Long id;
     private String name;
-    private String address;
-    private String city;
-    private String country;
+    private int totalCapacity;
+    private Long venueId;
 }

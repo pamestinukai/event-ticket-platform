@@ -3,11 +3,13 @@ package com.pamestinukai.backend.controllers;
 import com.pamestinukai.backend.dtos.request.EventRequestDTO;
 import com.pamestinukai.backend.dtos.request.EventFilterRequestDTO;
 import com.pamestinukai.backend.dtos.response.EventResponseDTO;
+import com.pamestinukai.backend.entities.Employee;
 import com.pamestinukai.backend.entities.Event;
 import com.pamestinukai.backend.mappers.EventResponseMapper;
 import com.pamestinukai.backend.services.interfaces.IEventService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.data.domain.Page;
@@ -25,6 +27,19 @@ public class EventController {
     @GetMapping
     public ResponseEntity<Page<EventResponseDTO>> getAllEvents(
             @ModelAttribute EventFilterRequestDTO filter) {
+        return ResponseEntity.ok(
+                eventService.getEvents(filter).map(eventResponseMapper::toDTO)
+        );
+    }
+
+    @GetMapping("/mine")
+    public ResponseEntity<Page<EventResponseDTO>> getMyEvents(
+            @AuthenticationPrincipal Employee employee,
+            @ModelAttribute EventFilterRequestDTO filter) {
+        if (employee == null || employee.getOrganization() == null) {
+            return ResponseEntity.ok(Page.empty());
+        }
+        filter.setOrganizationId(employee.getOrganization().getOrganizationId());
         return ResponseEntity.ok(
                 eventService.getEvents(filter).map(eventResponseMapper::toDTO)
         );
@@ -52,13 +67,24 @@ public class EventController {
     }
 
     @PostMapping
-    public ResponseEntity<EventResponseDTO> createEvent(@Valid @RequestBody EventRequestDTO eventRequestDTO) {
+    public ResponseEntity<EventResponseDTO> createEvent(
+            @AuthenticationPrincipal Employee employee,
+            @Valid @RequestBody EventRequestDTO eventRequestDTO) {
+        if (employee != null && employee.getOrganization() != null) {
+            eventRequestDTO.setOrganizationId(employee.getOrganization().getOrganizationId());
+        }
         Event event = eventService.createEvent(eventRequestDTO);
         return ResponseEntity.status(201).body(eventResponseMapper.toDTO(event));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<EventResponseDTO> updateEvent(@PathVariable Long id, @Valid @RequestBody EventRequestDTO eventRequestDTO) {
+    public ResponseEntity<EventResponseDTO> updateEvent(
+            @PathVariable Long id,
+            @AuthenticationPrincipal Employee employee,
+            @Valid @RequestBody EventRequestDTO eventRequestDTO) {
+        if (employee != null && employee.getOrganization() != null) {
+            eventRequestDTO.setOrganizationId(employee.getOrganization().getOrganizationId());
+        }
         Event event = eventService.updateEvent(id, eventRequestDTO);
         return ResponseEntity.ok(eventResponseMapper.toDTO(event));
     }

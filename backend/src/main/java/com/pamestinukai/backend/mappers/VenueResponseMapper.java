@@ -9,6 +9,7 @@ public class VenueResponseMapper {
     public VenueResponseDTO toDTO(Venue venue) {
         VenueResponseDTO venueResponseDTO = new VenueResponseDTO();
 
+        venueResponseDTO.setId(venue.getVenueId());
         venueResponseDTO.setName(venue.getName());
         venueResponseDTO.setAddress(venue.getAddress());
         venueResponseDTO.setCity(venue.getCity());

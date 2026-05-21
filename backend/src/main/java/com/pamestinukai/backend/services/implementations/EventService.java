@@ -6,6 +6,7 @@ import com.pamestinukai.backend.entities.Event;
 import com.pamestinukai.backend.exceptions.ResourceNotFoundException;
 import com.pamestinukai.backend.repositories.*;
 import com.pamestinukai.backend.services.interfaces.IEventService;
+import com.pamestinukai.backend.services.interfaces.ITicketTypeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
@@ -26,6 +27,7 @@ public class EventService implements IEventService {
     private final VenueRepository venueRepository;
     private final AuditoriumRepository auditoriumRepository;
     private final CategoryRepository categoryRepository;
+    private final ITicketTypeService ticketTypeService;
 
     @Transactional(readOnly = true)
     public List<Event> getAvailableEvents(){
@@ -69,7 +71,9 @@ public class EventService implements IEventService {
         Event event = mapToEntity(new Event(), eventRequestDTO);
         event.setCreatedAt(LocalDateTime.now());
         event.setUpdatedAt(LocalDateTime.now());
-        return eventRepository.save(event);
+        Event saved = eventRepository.save(event);
+        ticketTypeService.syncForEvent(saved, eventRequestDTO.getTicketTypes());
+        return saved;
     }
 
     public Event updateEvent(Long id, EventRequestDTO eventRequestDTO){
@@ -77,7 +81,9 @@ public class EventService implements IEventService {
         Event event = getEvent(id);
         mapToEntity(event, eventRequestDTO);
         event.setUpdatedAt(LocalDateTime.now());
-        return eventRepository.save(event);
+        Event saved = eventRepository.save(event);
+        ticketTypeService.syncForEvent(saved, eventRequestDTO.getTicketTypes());
+        return saved;
     }
 
     public void deleteEvent(Long id){

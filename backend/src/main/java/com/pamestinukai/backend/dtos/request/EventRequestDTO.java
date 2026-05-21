@@ -1,6 +1,7 @@
 package com.pamestinukai.backend.dtos.request;
 
 import com.pamestinukai.backend.entities.Event;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -46,4 +47,7 @@ public class EventRequestDTO {
 
     @NotNull(message = "Status is required")
     private Event.EventStatus status;
+
+    @Valid
+    private List<TicketTypeRequestDTO> ticketTypes;
 }
