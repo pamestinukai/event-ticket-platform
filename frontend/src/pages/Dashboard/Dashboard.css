@@ -1,0 +1,135 @@
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700;800&display=swap");
+
+.dashboardPageRoot {
+  --ink: #0f172a;
+  --muted: #5f6b7a;
+  --accent: #ff6b4a;
+  --accent-dark: #e0553a;
+  --surface: #ffffff;
+  --shadow: 0 24px 60px rgba(15, 23, 42, 0.12);
+  --hero-gradient: radial-gradient(circle at top left, #ffeadf 0%, #f6f2ff 45%, #e6f2ff 100%);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--hero-gradient);
+  color: var(--ink);
+  font-family: "Space Grotesk", "Sora", "Avenir Next", sans-serif;
+}
+
+.dashboardHero {
+  padding: 72px 0 48px;
+}
+
+.dashboardTitle {
+  font-weight: 800 !important;
+  line-height: 1.02 !important;
+  letter-spacing: -0.03em !important;
+  margin-bottom: 16px !important;
+}
+
+.dashboardSubtitle {
+  color: var(--muted) !important;
+  max-width: 560px;
+}
+
+.dashboardCta {
+  margin-top: 28px;
+}
+
+.dashboardHeroCard {
+  background: var(--surface);
+  border-radius: 20px;
+  padding: 28px;
+  box-shadow: var(--shadow);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.dashboardHeroBadge {
+  color: var(--accent) !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.2em !important;
+}
+
+.dashboardHeroBody {
+  color: var(--muted) !important;
+  margin-top: 8px !important;
+}
+
+.dashboardSection {
+  padding: 24px 0 80px;
+}
+
+.dashboardSectionHeader {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.sectionTitle {
+  font-weight: 800 !important;
+}
+
+.sectionSubtitle {
+  color: var(--muted) !important;
+}
+
+.dashboardState {
+  min-height: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 20px;
+  border: 1px dashed rgba(15, 23, 42, 0.15);
+}
+
+.eventCard {
+  border-radius: 20px !important;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.eventCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 30px 70px rgba(15, 23, 42, 0.16);
+}
+
+.eventCardFallback {
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(120deg, #f1f5f9, #e2e8f0);
+  color: var(--muted);
+}
+
+.eventCardFooter {
+  margin-top: 16px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+@media (max-width: 900px) {
+  .dashboardHero {
+    padding-top: 48px;
+  }
+
+  .dashboardTitle {
+    font-size: 2.6rem !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboardTitle {
+    font-size: 2.2rem !important;
+  }
+}
