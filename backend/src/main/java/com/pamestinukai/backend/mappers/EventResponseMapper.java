@@ -44,7 +44,7 @@ public class EventResponseMapper {
                         .min(BigDecimal::compareTo)
                         .orElse(null)
         );
-        dto.setAuditoriumName(event.getAuditorium().getName());
+        if (event.getAuditorium() != null) dto.setAuditoriumName(event.getAuditorium().getName());
         dto.setCategoryName(event.getCategory().getName());
         return dto;
     }

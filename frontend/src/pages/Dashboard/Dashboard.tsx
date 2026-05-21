@@ -1,104 +1,24 @@
-import { Box, Button, Card, CardActionArea, CardContent, CardMedia, Chip, CircularProgress, Container, Grid, Stack, Typography } from "@mui/material";
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { getAvailableEvents } from "../../api/events";
-import { Header } from "../../components/Header/Header";
+import { useEffect, useState } from "react";
+import { Alert, Box, Button, CircularProgress, Container, Paper, Stack, Typography } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
 import { useAuth } from "../../context/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { getMyEvents } from "../../api/events";
 import type { EventResponse } from "../../types/EventResponse";
-import "./Dashboard.css";
-
-type LoadState = "idle" | "loading" | "ready" | "error";
-
-function EventCardItem({ event, onOpen }: { event: EventResponse; onOpen: () => void }) {
-  const [hasImageError, setHasImageError] = useState(false);
-  const imageSrc = event.images?.[0];
-
-  function formatDate(value: string) {
-    return new Intl.DateTimeFormat("en-GB", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    }).format(new Date(value));
-  }
-
-  return (
-    <Card className="eventCard">
-      <CardActionArea onClick={onOpen}>
-        {!hasImageError && imageSrc && (
-          <CardMedia
-            component="img"
-            height="180"
-            image={imageSrc}
-            alt={event.title}
-            onError={() => setHasImageError(true)}
-          />
-        )}
-        {(hasImageError || !imageSrc) && (
-          <Box className="eventCardFallback">
-            <Typography variant="body2">No image available</Typography>
-          </Box>
-        )}
-        <CardContent>
-          <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
-            <Chip size="small" label={event.categoryName} />
-            <Chip size="small" variant="outlined" label={event.venue.city} />
-          </Stack>
-          <Typography variant="h6" sx={{ fontWeight: 700 }} gutterBottom>
-            {event.title}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {formatDate(event.startDatetime)}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {event.venue.name}
-          </Typography>
-          <Box className="eventCardFooter">
-            <Typography variant="body2" color="text.secondary">From</Typography>
-            <Typography variant="h6" sx={{ fontWeight: 700 }}>
-              €{event.startingTicketPrice.toFixed(2)}
-            </Typography>
-          </Box>
-        </CardContent>
-      </CardActionArea>
-    </Card>
-  );
-}
+import { EventCard } from "../../components/EventCard/EventCard";
 
 export function Dashboard() {
-  const { email, logout } = useAuth();
+  const { token, email, logout } = useAuth();
   const navigate = useNavigate();
-  const [events, setEvents] = useState<EventResponse[]>([]);
-  const [loadState, setLoadState] = useState<LoadState>("idle");
+  const [events, setEvents] = useState<EventResponse[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let isActive = true;
-    setLoadState("loading");
-    getAvailableEvents()
-      .then((data) => {
-        if (!isActive) return;
-        setEvents(data);
-        setLoadState("ready");
-      })
-      .catch(() => {
-        if (!isActive) return;
-        setLoadState("error");
-      });
-    return () => {
-      isActive = false;
-    };
-  }, []);
-
-  const upcomingEvents = useMemo(() => {
-    const now = Date.now();
-    return events
-      .filter((event) => event.status === "PUBLISHED" || event.status === "RESCHEDULED")
-      .filter((event) => new Date(event.startDatetime).getTime() > now)
-      .filter((event) => event.startingTicketPrice > 0)
-      .sort((a, b) => new Date(a.startDatetime).getTime() - new Date(b.startDatetime).getTime());
-  }, [events]);
-
-  const isLoading = loadState === "loading";
-  const hasError = loadState === "error";
-  const isEmpty = loadState === "ready" && upcomingEvents.length === 0;
+    if (!token) return;
+    getMyEvents(token)
+      .then(setEvents)
+      .catch((err) => setError(err.message));
+  }, [token]);
 
   function handleLogout() {
     logout();
@@ -106,72 +26,56 @@ export function Dashboard() {
   }
 
   return (
-    <Box className="dashboardPageRoot">
-      <Header />
-      <Box className="dashboardHero">
-        <Container maxWidth="lg">
-          <Grid container spacing={4} sx={{ alignItems: "center" }}>
-            <Grid size={{ xs: 12, md: 7 }}>
-              <Typography variant="h2" component="h1" className="dashboardTitle">
-                Welcome back{email ? `, ${email}` : ""}.
-              </Typography>
-              <Typography variant="h6" className="dashboardSubtitle">
-                Track the next events your organization can promote and share.
-              </Typography>
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={2} className="dashboardCta">
-                <Button variant="outlined" size="large" onClick={handleLogout}>Log out</Button>
-              </Stack>
-            </Grid>
-            <Grid size={{ xs: 12, md: 5 }}>
-              <Box className="dashboardHeroCard">
-                <Typography variant="overline" className="dashboardHeroBadge">Upcoming</Typography>
-                <Typography variant="h5" sx={{ fontWeight: 700 }}>Live ticketing insights</Typography>
-                <Typography variant="body1" className="dashboardHeroBody">
-                  This catalog shows only future events with available ticket types.
-                </Typography>
-              </Box>
-            </Grid>
-          </Grid>
-        </Container>
-      </Box>
+    <Box sx={{ minHeight: "100vh", py: 6 }}>
+      <Container maxWidth="md">
+        <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", mb: 4 }}>
+          <Box>
+            <Typography variant="h4" sx={{ fontWeight: 700 }}>Dashboard</Typography>
+            <Typography variant="body2" color="text.secondary">Logged in as <strong>{email}</strong></Typography>
+          </Box>
+          <Button variant="outlined" onClick={handleLogout}>Log out</Button>
+        </Stack>
 
-      <Container maxWidth="lg" className="dashboardSection">
-        <Box className="dashboardSectionHeader">
-          <Typography variant="h4" className="sectionTitle">Event catalog</Typography>
-          <Typography variant="body1" className="sectionSubtitle">
-            Sorted by the soonest start date.
-          </Typography>
-        </Box>
+        <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", mb: 2 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>My events</Typography>
+          <Button
+            variant="contained"
+            disableElevation
+            startIcon={<AddIcon />}
+            onClick={() => navigate("/events/new")}
+            sx={{ textTransform: "none", borderRadius: 1 }}
+          >
+            Create event
+          </Button>
+        </Stack>
 
-        {isLoading && (
-          <Box className="dashboardState">
-            <CircularProgress size={48} />
-            <Typography variant="body1">Loading upcoming events...</Typography>
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+        {events === null && !error && (
+          <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
+            <CircularProgress />
           </Box>
         )}
 
-        {hasError && (
-          <Box className="dashboardState">
-            <Typography variant="h6">Unable to load events right now.</Typography>
-            <Typography variant="body2">Please refresh and try again.</Typography>
-          </Box>
+        {events !== null && events.length === 0 && (
+          <Paper elevation={0} sx={{ p: 4, textAlign: "center", border: "1px dashed", borderColor: "divider", borderRadius: 1 }}>
+            <Typography variant="body1" color="text.secondary">You haven't created any events yet.</Typography>
+          </Paper>
         )}
 
-        {isEmpty && (
-          <Box className="dashboardState">
-            <Typography variant="h6">No upcoming events yet.</Typography>
-            <Typography variant="body2">Check back soon for new listings.</Typography>
-          </Box>
-        )}
-
-        {!isLoading && !hasError && upcomingEvents.length > 0 && (
-          <Grid container spacing={3}>
-            {upcomingEvents.map((event) => (
-              <Grid size={{ xs: 12, sm: 6, md: 4 }} key={event.id}>
-                <EventCardItem event={event} onOpen={() => navigate(`/event/${event.id}`)} />
-              </Grid>
-            ))}
-          </Grid>
+        {events !== null && events.length > 0 && (
+          <Stack spacing={2}>
+            {events.map((e) => {
+              const eventId = (e as unknown as { eventId: number }).eventId;
+              return (
+                <EventCard
+                  key={eventId}
+                  event={e}
+                  onEdit={() => navigate(`/events/${eventId}/edit`)}
+                />
+              );
+            })}
+          </Stack>
         )}
       </Container>
     </Box>
