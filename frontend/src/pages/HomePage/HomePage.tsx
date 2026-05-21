@@ -1,80 +1,99 @@
-import { Box, CircularProgress, Container, Grid, Stack, Typography } from "@mui/material";
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { getAvailableEvents } from "../../api/events";
-import { EventCard } from "../../components/EventCard/EventCard";
-import { EventSearchBar } from "../../components/EventSearchBar/EventSearchBar";
-import { Header } from "../../components/Header/Header";
-import type { EventResponse } from "../../types/EventResponse";
-import "./HomePage.css";
-
-function matchesKeyword(event: EventResponse, keyword: string): boolean {
-  const q = keyword.toLowerCase();
-  return (
-    event.title.toLowerCase().includes(q) ||
-    event.description.toLowerCase().includes(q) ||
-    event.performers.some(p => p.toLowerCase().includes(q))
-  );
-}
+import {
+  Box,
+  CircularProgress,
+  Container,
+  Grid,
+  Stack,
+  Typography,
+} from '@mui/material';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { searchPublicEvents } from '../../api/events';
+import { EventCard } from '../../components/EventCard/EventCard';
+import { EventSearchBar } from '../../components/EventSearchBar/EventSearchBar';
+import { Header } from '../../components/Header/Header';
+import type { EventResponse } from '../../types/EventResponse';
+import './HomePage.css';
 
 export function HomePage() {
   const navigate = useNavigate();
-  const [allEvents, setAllEvents] = useState<EventResponse[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [events, setEvents] = useState<EventResponse[]>([]);
+  const [fetchedQuery, setFetchedQuery] = useState<string | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
-  const [activeQuery, setActiveQuery] = useState("");
+  const [activeQuery, setActiveQuery] = useState('');
+
+  const loading = fetchedQuery !== activeQuery;
 
   useEffect(() => {
-    getAvailableEvents()
-      .then(data => setAllEvents(data))
-      .catch(err => setError(err.message))
-      .finally(() => setLoading(false));
-  }, []);
-
-  const filteredEvents = useMemo(() => {
-    if (!activeQuery.trim()) return allEvents;
-    return allEvents.filter(e => matchesKeyword(e, activeQuery.trim()));
-  }, [allEvents, activeQuery]);
+    let cancelled = false;
+    searchPublicEvents(activeQuery)
+      .then((data) => {
+        if (!cancelled) {
+          setEvents(data);
+          setFetchedQuery(activeQuery);
+          setError(null);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err.message);
+          setFetchedQuery(activeQuery);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeQuery]);
 
   const hasQuery = activeQuery.trim().length > 0;
 
   return (
-    <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
+    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
       <Header />
-      <Container maxWidth="lg" sx={{ py: 4, flex: 1 }}>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 0.5 }}>
+      <Container maxWidth='lg' sx={{ py: 4, flex: 1 }}>
+        <Typography
+          variant='h4'
+          component='h1'
+          sx={{ fontWeight: 700, mb: 0.5 }}
+        >
           Upcoming Events
         </Typography>
-        <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+        <Typography
+          variant='body1'
+          color='text.secondary'
+          sx={{ mb: 3 }}
+        >
           Browse and buy tickets for the latest events
         </Typography>
 
         <EventSearchBar onSearch={setActiveQuery} />
 
         {loading && (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+          <Box
+            sx={{ display: 'flex', justifyContent: 'center', py: 8 }}
+          >
             <CircularProgress />
           </Box>
         )}
 
-        {error && (
-          <Typography color="error">{error}</Typography>
-        )}
+        {error && <Typography color='error'>{error}</Typography>}
 
-        {!loading && !error && filteredEvents.length === 0 && (
-          <Typography color="text.secondary">
+        {!loading && !error && events.length === 0 && (
+          <Typography color='text.secondary'>
             {hasQuery
               ? `No events found for "${activeQuery}". Try a different keyword.`
-              : "No upcoming events found."}
+              : 'No upcoming events found.'}
           </Typography>
         )}
 
-        {!loading && !error && filteredEvents.length > 0 && (
+        {!loading && !error && events.length > 0 && (
           <Grid container spacing={2}>
-            {filteredEvents.map(event => (
+            {events.map((event) => (
               <Grid size={12} key={String(event.eventId)}>
                 <Stack
-                  sx={{ cursor: "pointer" }}
+                  sx={{ cursor: 'pointer' }}
                   onClick={() => navigate(`/event/${event.eventId}`)}
                 >
                   <EventCard event={event} />

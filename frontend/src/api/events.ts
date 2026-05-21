@@ -20,12 +20,31 @@ export async function getEventById(id: string, token?: string): Promise<EventRes
     return await response.json();
 }
 
-export async function getAvailableEvents(): Promise<EventResponse[]> {
-    const res = await fetch(`${API_BASE_URL}/api/events/public/available`);
-    if (!res.ok) {
-        throw new Error("Failed to load events");
+export async function searchPublicEvents(keyword: string): Promise<EventResponse[]> {
+    const q = keyword.trim();
+    const base = `${API_BASE_URL}/api/events/public/search`;
+    const commonParams = `size=100&sortBy=startDatetime&sortDir=asc`;
+
+    if (!q) {
+        const res = await fetch(`${base}?${commonParams}`);
+        if (!res.ok) throw new Error("Failed to load events");
+        return (await res.json()).content;
     }
-    return res.json();
+
+    const [kwRes, perfRes] = await Promise.all([
+        fetch(`${base}?keyword=${encodeURIComponent(q)}&${commonParams}`),
+        fetch(`${base}?performer=${encodeURIComponent(q)}&${commonParams}`),
+    ]);
+    if (!kwRes.ok || !perfRes.ok) throw new Error("Failed to search events");
+    const [kwData, perfData] = await Promise.all([kwRes.json(), perfRes.json()]);
+
+    const seen = new Set<string>();
+    return [...kwData.content, ...perfData.content].filter(e => {
+        const key = String(e.eventId);
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
 }
 
 export async function getMyEvents(token: string): Promise<EventResponse[]> {
