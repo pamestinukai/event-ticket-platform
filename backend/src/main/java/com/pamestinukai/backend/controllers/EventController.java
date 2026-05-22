@@ -45,6 +45,17 @@ public class EventController {
         );
     }
 
+    @GetMapping("/public/search")
+    public ResponseEntity<Page<EventResponseDTO>> searchPublicEvents(
+            @ModelAttribute EventFilterRequestDTO filter) {
+        if (filter.getStatus() == null) {
+            filter.setStatus(Event.EventStatus.PUBLISHED);
+        }
+        return ResponseEntity.ok(
+                eventService.getEvents(filter).map(eventResponseMapper::toDTO)
+        );
+    }
+
     @GetMapping("/public/available")
     public ResponseEntity<List<EventResponseDTO>> getAvailableEvents() {
         List<Event> events = eventService.getAvailableEvents();

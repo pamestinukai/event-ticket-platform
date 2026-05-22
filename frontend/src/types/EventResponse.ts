@@ -4,7 +4,7 @@ import type {VenueResponse} from "./VenueResponse.ts";
 export type EventType = "DRAFT" | "PUBLISHED" | "CANCELED" | "RESCHEDULED" | "COMPLETED";
 
 export interface EventResponse {
-    id : bigint;
+    eventId : bigint;
     title : string;
     description : string;
     performers : string[];

@@ -24,11 +24,18 @@ export function EventCard({ event, onEdit }: EventCardProps) {
       <Box sx={{ p: 2, flex: 1, display: "flex", flexDirection: "column" }}>
         <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
           <Typography variant="h6" sx={{ fontWeight: 700 }}>{event.title}</Typography>
-          {onEdit && (
-            <Button size="small" startIcon={<EditIcon />} onClick={() => onEdit(event)} sx={{ textTransform: "none" }}>
-              Edit
-            </Button>
-          )}
+          <Stack direction="row" sx={{ alignItems: "center", gap: 1, flexShrink: 0, ml: 1 }}>
+            {event.startingTicketPrice != null && (
+              <Typography variant="body2" sx={{ fontWeight: 600, color: "primary.main", whiteSpace: "nowrap" }}>
+                From €{Number(event.startingTicketPrice).toFixed(2)}
+              </Typography>
+            )}
+            {onEdit && (
+              <Button size="small" startIcon={<EditIcon />} onClick={() => onEdit(event)} sx={{ textTransform: "none" }}>
+                Edit
+              </Button>
+            )}
+          </Stack>
         </Stack>
         <Stack spacing={0.5}>
           <Stack direction="row" spacing={1} sx={{ alignItems: "center" }}>
