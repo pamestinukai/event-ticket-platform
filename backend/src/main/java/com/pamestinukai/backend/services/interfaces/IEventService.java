@@ -16,4 +16,5 @@ public interface IEventService {
     Event createEvent(EventRequestDTO eventRequestDTO);
     Event updateEvent(Long id, EventRequestDTO eventRequestDTO);
     void deleteEvent(Long id);
+    void assertPurchasable(Event event);
 }

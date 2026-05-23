@@ -3,6 +3,7 @@ package com.pamestinukai.backend.services.implementations;
 import com.pamestinukai.backend.dtos.request.EventFilterRequestDTO;
 import com.pamestinukai.backend.dtos.request.EventRequestDTO;
 import com.pamestinukai.backend.entities.Event;
+import com.pamestinukai.backend.exceptions.EventStatusException;
 import com.pamestinukai.backend.exceptions.ResourceNotFoundException;
 import com.pamestinukai.backend.repositories.*;
 import com.pamestinukai.backend.services.interfaces.IEventService;
@@ -16,11 +17,23 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class EventService implements IEventService {
+
+    private static final List<Event.EventStatus> PURCHASABLE_STATUSES = List.of(
+            Event.EventStatus.PUBLISHED,
+            Event.EventStatus.RESCHEDULED
+    );
+
+    private static final Set<Event.EventStatus> BLOCKED_FOR_PURCHASE = Set.of(
+            Event.EventStatus.CANCELED,
+            Event.EventStatus.SOLD_OUT,
+            Event.EventStatus.COMPLETED
+    );
 
     private final EventRepository eventRepository;
     private final OrganizationRepository organizationRepository;
@@ -30,28 +43,22 @@ public class EventService implements IEventService {
     private final ITicketTypeService ticketTypeService;
 
     @Transactional(readOnly = true)
-    public List<Event> getAvailableEvents(){
-        List<Event.EventStatus> availableStatuses = List.of(
-                Event.EventStatus.PUBLISHED,
-                Event.EventStatus.RESCHEDULED
-        );
-        return eventRepository.findByStatusIn(availableStatuses);
+    public List<Event> getAvailableEvents() {
+        return eventRepository.findByStatusIn(PURCHASABLE_STATUSES);
     }
 
     @Transactional(readOnly = true)
-    public Event getEvent(Long id){
+    public Event getEvent(Long id) {
         return eventRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
     }
 
     @Transactional(readOnly = true)
-    public Event getAvailableEvent(Long id){
-        List<Event.EventStatus> availableStatuses = List.of(
-                Event.EventStatus.PUBLISHED,
-                Event.EventStatus.RESCHEDULED
-        );
-        return eventRepository.findByEventIdAndStatusIn(id, availableStatuses)
-                .orElseThrow(() -> new ResourceNotFoundException("Event not found or not available"));
+    public Event getAvailableEvent(Long id) {
+        Event event = eventRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
+        assertPurchasable(event);
+        return event;
     }
 
     @Transactional(readOnly = true)
@@ -66,31 +73,43 @@ public class EventService implements IEventService {
         return eventRepository.findAll(spec, pageable);
     }
 
-    public Event createEvent(EventRequestDTO eventRequestDTO){
-        validateEventTime(eventRequestDTO);
-        Event event = mapToEntity(new Event(), eventRequestDTO);
+    public Event createEvent(EventRequestDTO dto) {
+        validateEventTime(dto);
+        Event event = mapToEntity(new Event(), dto);
         event.setCreatedAt(LocalDateTime.now());
         event.setUpdatedAt(LocalDateTime.now());
         Event saved = eventRepository.save(event);
-        ticketTypeService.syncForEvent(saved, eventRequestDTO.getTicketTypes());
+        ticketTypeService.syncForEvent(saved, dto.getTicketTypes());
         return saved;
     }
 
-    public Event updateEvent(Long id, EventRequestDTO eventRequestDTO){
-        validateEventTime(eventRequestDTO);
+    public Event updateEvent(Long id, EventRequestDTO dto) {
+        validateEventTime(dto);
         Event event = getEvent(id);
-        mapToEntity(event, eventRequestDTO);
+        mapToEntity(event, dto);
         event.setUpdatedAt(LocalDateTime.now());
         Event saved = eventRepository.save(event);
-        ticketTypeService.syncForEvent(saved, eventRequestDTO.getTicketTypes());
+        ticketTypeService.syncForEvent(saved, dto.getTicketTypes());
         return saved;
     }
 
-    public void deleteEvent(Long id){
-        if (!eventRepository.existsById(id)){
+    public void deleteEvent(Long id) {
+        if (!eventRepository.existsById(id)) {
             throw new ResourceNotFoundException("Event not found");
         }
         eventRepository.deleteById(id);
+    }
+
+    public void assertPurchasable(Event event) {
+        if (BLOCKED_FOR_PURCHASE.contains(event.getStatus())) {
+            String reason = switch (event.getStatus()) {
+                case CANCELED  -> "This event has been cancelled.";
+                case SOLD_OUT  -> "This event is sold out.";
+                case COMPLETED -> "This event has already taken place.";
+                default        -> "Tickets are not available for this event.";
+            };
+            throw new EventStatusException(reason);
+        }
     }
 
     private Specification<Event> buildSpec(EventFilterRequestDTO f) {
@@ -116,23 +135,17 @@ public class EventService implements IEventService {
 
     private Specification<Event> hasCategory(Long categoryId) {
         return (root, query, cb) ->
-                categoryId != null
-                        ? cb.equal(root.get("category").get("categoryId"), categoryId)
-                        : null;
+                categoryId != null ? cb.equal(root.get("category").get("categoryId"), categoryId) : null;
     }
 
     private Specification<Event> hasVenue(Long venueId) {
         return (root, query, cb) ->
-                venueId != null
-                        ? cb.equal(root.get("venue").get("venueId"), venueId)
-                        : null;
+                venueId != null ? cb.equal(root.get("venue").get("venueId"), venueId) : null;
     }
 
     private Specification<Event> hasOrganization(Long organizationId) {
         return (root, query, cb) ->
-                organizationId != null
-                        ? cb.equal(root.get("organization").get("organizationId"), organizationId)
-                        : null;
+                organizationId != null ? cb.equal(root.get("organization").get("organizationId"), organizationId) : null;
     }
 
     private Specification<Event> hasDateBetween(LocalDateTime from, LocalDateTime to) {
@@ -146,9 +159,7 @@ public class EventService implements IEventService {
 
     private Specification<Event> hasStatus(Event.EventStatus status) {
         return (root, query, cb) ->
-                status != null
-                        ? cb.equal(root.get("status"), status)
-                        : null;
+                status != null ? cb.equal(root.get("status"), status) : null;
     }
 
     private Sort buildSort(String sortBy, String sortDir) {
@@ -189,8 +200,8 @@ public class EventService implements IEventService {
         return event;
     }
 
-    private void validateEventTime(EventRequestDTO dto){
-        if(dto.getStartDatetime().isAfter(dto.getEndDatetime())){
+    private void validateEventTime(EventRequestDTO dto) {
+        if (dto.getStartDatetime().isAfter(dto.getEndDatetime())) {
             throw new IllegalArgumentException("Start datetime must be before end datetime");
         }
     }
