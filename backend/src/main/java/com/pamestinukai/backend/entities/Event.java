@@ -58,6 +58,6 @@ public class Event {
     private LocalDateTime updatedAt;
 
     public enum EventStatus {
-        DRAFT, PUBLISHED, CANCELED, RESCHEDULED, COMPLETED
+        DRAFT, PUBLISHED, CANCELED, RESCHEDULED, SOLD_OUT, COMPLETED
     }
 }

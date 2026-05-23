@@ -9,4 +9,6 @@ import java.util.List;
 public interface ITicketTypeService {
     List<TicketType> getByEventId(Long eventId);
     void syncForEvent(Event event, List<TicketTypeRequestDTO> requested);
+    void reserveTickets(Long ticketTypeId, int quantity);
+    void releaseTickets(Long ticketTypeId, int quantity);
 }
