@@ -1,6 +1,5 @@
 package com.pamestinukai.backend.services.implementations;
 
-import com.pamestinukai.backend.dtos.ReservedTicketSummaryDTO;
 import com.pamestinukai.backend.dtos.TicketReservationItemDTO;
 import com.pamestinukai.backend.dtos.request.TicketReservationRequestDTO;
 import com.pamestinukai.backend.dtos.response.TicketReservationResponseDTO;
@@ -42,7 +41,7 @@ public class TicketService implements ITicketService {
    private final PurchaseRepository purchaseRepository;
    private final TicketMapper ticketMapper;
 
-   public TicketReservationResponseDTO reserveTicket(TicketReservationRequestDTO dto){;
+   public TicketReservationResponseDTO reserveTicket(TicketReservationRequestDTO dto){
 
       Event event = eventRepository.findById(dto.getEventId())
               .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
@@ -52,7 +51,6 @@ public class TicketService implements ITicketService {
       List<Ticket> tickets = createReservedTickets(dto.getTickets(), ticketTypeMap, purchase);
       ticketRepository.saveAll(tickets);
       BigDecimal totalPrice = calculatePrice(dto.getTickets(), ticketTypeMap);
-      List<ReservedTicketSummaryDTO> ticketSummaries = ticketMapper.toReservedTicketSummaryDTOs(dto.getTickets(), ticketTypeMap);
 
       log.info("Tickets reserved");
       return ticketMapper.toReservationResponseDTO(dto, event, ticketTypeMap, purchase, totalPrice);
