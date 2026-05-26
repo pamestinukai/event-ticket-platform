@@ -23,7 +23,12 @@
 - In root run `pnpm i`
 - In root/frontend run `pnpm i`
 
-### 2. Start the Postgres database
+### 2. Setup local app properties
+
+- In `backend\src\main\resources create file` create file `application-local.properties` and copy values from `application-local.properties.example`
+- Modify property values as needed
+
+### 3. Start the Postgres database
 
 Run a Postgres container via Podman
 
@@ -31,7 +36,7 @@ Run a Postgres container via Podman
 pnpm start:db
 ```
 
-### 3. Start the frontend & backend
+### 4. Start the frontend & backend
 
 ```bash
 pnpm start
