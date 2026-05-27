@@ -2,7 +2,11 @@ package com.pamestinukai.backend.services.implementations;
 
 import com.pamestinukai.backend.dtos.request.EventFilterRequestDTO;
 import com.pamestinukai.backend.dtos.request.EventRequestDTO;
+import com.pamestinukai.backend.dtos.response.EventAnalyticsResponseDTO;
+import com.pamestinukai.backend.dtos.response.EventTicketTypeAnalyticsDTO;
 import com.pamestinukai.backend.entities.Event;
+import com.pamestinukai.backend.entities.Ticket;
+import com.pamestinukai.backend.entities.TicketType;
 import com.pamestinukai.backend.exceptions.EventStatusException;
 import com.pamestinukai.backend.exceptions.ResourceNotFoundException;
 import com.pamestinukai.backend.repositories.*;
@@ -11,10 +15,13 @@ import com.pamestinukai.backend.services.interfaces.ITicketTypeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
@@ -35,11 +42,18 @@ public class EventService implements IEventService {
             Event.EventStatus.COMPLETED
     );
 
+        private static final List<Ticket.TicketStatus> SOLD_STATUSES = List.of(
+            Ticket.TicketStatus.VALID,
+            Ticket.TicketStatus.CHECKED_IN
+        );
+
     private final EventRepository eventRepository;
     private final OrganizationRepository organizationRepository;
     private final VenueRepository venueRepository;
     private final AuditoriumRepository auditoriumRepository;
     private final CategoryRepository categoryRepository;
+    private final TicketRepository ticketRepository;
+    private final TicketTypeRepository ticketTypeRepository;
     private final ITicketTypeService ticketTypeService;
 
     @Transactional(readOnly = true)
@@ -59,6 +73,50 @@ public class EventService implements IEventService {
                 .orElseThrow(() -> new ResourceNotFoundException("Event not found"));
         assertPurchasable(event);
         return event;
+    }
+
+    @Transactional(readOnly = true)
+    public EventAnalyticsResponseDTO getEventAnalytics(Long id, Long organizationId) {
+        Event event = getEvent(id);
+        if (organizationId == null
+                || event.getOrganization() == null
+                || !organizationId.equals(event.getOrganization().getOrganizationId())) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "You can only view analytics for your organization's events"
+            );
+        }
+
+        if (event.getEndDatetime() == null || event.getEndDatetime().isAfter(LocalDateTime.now())) {
+            throw new IllegalArgumentException("Analytics are available only for past events");
+        }
+
+        int totalCapacity = ticketTypeRepository.sumTotalQuantityByEventId(id);
+        int ticketsSold = (int) ticketRepository.countByEventIdAndStatuses(id, SOLD_STATUSES);
+        int checkedIn = (int) ticketRepository.countByEventIdAndStatuses(
+                id,
+                List.of(Ticket.TicketStatus.CHECKED_IN)
+        );
+        BigDecimal revenue = ticketRepository.sumRevenueByEventIdAndStatuses(
+                id,
+                SOLD_STATUSES
+        );
+
+        List<EventTicketTypeAnalyticsDTO> byType = ticketTypeRepository.findByEvent(event)
+                .stream()
+            .map(this::mapTicketTypeAnalytics)
+                .toList();
+
+        EventAnalyticsResponseDTO analytics = new EventAnalyticsResponseDTO();
+        analytics.setEventId(event.getEventId());
+        analytics.setEventTitle(event.getTitle());
+        analytics.setTotalCapacity(totalCapacity);
+        analytics.setTicketsSold(ticketsSold);
+        analytics.setCheckedIn(checkedIn);
+        analytics.setRevenue(revenue);
+        analytics.setAttendanceRate(ticketsSold == 0 ? 0.0 : (checkedIn * 100.0) / ticketsSold);
+        analytics.setTicketTypeAnalytics(byType);
+        return analytics;
     }
 
     @Transactional(readOnly = true)
@@ -111,6 +169,29 @@ public class EventService implements IEventService {
             throw new EventStatusException(reason);
         }
     }
+
+        private EventTicketTypeAnalyticsDTO mapTicketTypeAnalytics(TicketType ticketType) {
+            long soldForType = ticketRepository.countByTicketTypeIdAndStatuses(
+                ticketType.getTicketTypeId(),
+                SOLD_STATUSES
+            );
+            long checkedInForType = ticketRepository.countByTicketTypeIdAndStatuses(
+                ticketType.getTicketTypeId(),
+                List.of(Ticket.TicketStatus.CHECKED_IN)
+            );
+            BigDecimal revenueForType = ticketRepository.sumRevenueByTicketTypeIdAndStatuses(
+                ticketType.getTicketTypeId(),
+                SOLD_STATUSES
+            );
+
+        EventTicketTypeAnalyticsDTO dto = new EventTicketTypeAnalyticsDTO();
+        dto.setTicketTypeId(ticketType.getTicketTypeId());
+        dto.setTicketTypeName(ticketType.getName());
+            dto.setTicketsSold((int) soldForType);
+            dto.setCheckedIn((int) checkedInForType);
+            dto.setRevenue(revenueForType);
+        return dto;
+        }
 
     private Specification<Event> buildSpec(EventFilterRequestDTO f) {
         return Specification
