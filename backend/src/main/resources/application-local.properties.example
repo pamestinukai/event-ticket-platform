@@ -1,2 +1,21 @@
 JWT_SECRET=replace_with_at_least_256_bit_hex_secret
 JWT_EXPIRATION_MS=86400000
+
+MAIL_HOST=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USERNAME=your_smtp_username
+MAIL_PASSWORD=your_smtp_password_or_app_password
+MAIL_FROM=no-reply@example.com
+MAIL_FROM_NAME=Pamestinukai
+
+# For local MailHog/Mailpit, override the SMTP options to disable auth and TLS:
+#   MAIL_HOST=localhost
+#   MAIL_PORT=1025
+#   MAIL_USERNAME=
+#   MAIL_PASSWORD=
+#   spring.mail.properties.mail.smtp.auth=false
+#   spring.mail.properties.mail.smtp.starttls.enable=false
+#   spring.mail.properties.mail.smtp.starttls.required=false
+
+# Set to true to expose POST /api/dev/email/test (open auth) for manual testing. Keep false otherwise.
+app.mail.dev-endpoint=false
