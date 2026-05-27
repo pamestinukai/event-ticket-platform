@@ -28,7 +28,7 @@ public class Ticket {
     @JoinColumn(name = "seat_id")
     private Seat seat; // nullable
 
-    @Column(unique = true, nullable = false)
+    @Column(unique = true)
     private String qrToken;
 
     @Enumerated(EnumType.STRING)
@@ -37,6 +37,6 @@ public class Ticket {
     private LocalDateTime issuedAt;
 
     public enum TicketStatus {
-        VALID, CHECKED_IN, CANCELED, REFUNDED
+        RESERVED, VALID, CHECKED_IN, CANCELED, REFUNDED
     }
 }

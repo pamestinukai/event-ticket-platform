@@ -31,7 +31,6 @@ public class EventRequestDTO {
     @Size(max = 100, message = "Title must be up to 100 characters long")
     private String title;
 
-    @Size(max = 1000, message = "Description must not exceed 1000 characters")
     private String description;
 
     private List<String> performers;
