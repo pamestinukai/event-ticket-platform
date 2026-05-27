@@ -142,6 +142,7 @@ public class TicketService implements ITicketService {
             ticket.setStatus(Ticket.TicketStatus.RESERVED);
             ticket.setPurchase(purchase);
             ticket.setIssuedAt(LocalDateTime.now());
+            ticket.setQrToken(java.util.UUID.randomUUID().toString());
             tickets.add(ticket);
          }
       }
