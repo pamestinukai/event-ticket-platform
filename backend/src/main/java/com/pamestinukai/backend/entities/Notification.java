@@ -24,6 +24,10 @@ public class Notification {
     @JoinColumn(name = "event_id")
     private Event event;
 
+    @ManyToOne
+    @JoinColumn(name = "ticket_id")
+    private Ticket ticket;
+
     @Enumerated(EnumType.STRING)
     private NotificationType type;
 
@@ -32,6 +36,10 @@ public class Notification {
 
     private LocalDateTime scheduledAt;
     private LocalDateTime sentAt;
+    private Integer attemptCount;
+
+    @Column(length = 1024)
+    private String lastError;
 
     public enum NotificationType { REMINDER, CANCELLATION, RESCHEDULE, CONFIRMATION }
     public enum NotificationStatus { SCHEDULED, SENT, FAILED, CANCELED }
