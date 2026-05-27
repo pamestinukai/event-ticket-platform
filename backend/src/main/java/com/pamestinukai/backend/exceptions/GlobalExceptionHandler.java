@@ -17,6 +17,21 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse(ex.getMessage()));
     }
 
+    @ExceptionHandler(InsufficientTicketsException.class)
+    public ResponseEntity<ErrorResponse> handleInsufficientTicketsException(InsufficientTicketsException ex){
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(EventStatusException.class)
+    public ResponseEntity<ErrorResponse> handleEventStatusException(EventStatusException ex){
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse(ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidTicketStatusException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidTicketStatusException(InvalidTicketStatusException ex){
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse(ex.getMessage()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
