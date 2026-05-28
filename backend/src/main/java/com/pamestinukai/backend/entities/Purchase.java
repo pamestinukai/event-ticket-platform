@@ -23,6 +23,7 @@ public class Purchase {
     private String currency;
     private String paymentProvider;
     private String providerTransactionId;
+    private String stripeSessionId;
 
     @Enumerated(EnumType.STRING)
     private PurchaseStatus status;

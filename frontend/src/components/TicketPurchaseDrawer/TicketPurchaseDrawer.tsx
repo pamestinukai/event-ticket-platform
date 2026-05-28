@@ -16,9 +16,9 @@ import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { getTicketTypes } from '../../api/ticketTypes';
-import { reserveTickets, confirmReservation, cancelReservation } from '../../api/tickets';
+import { reserveTickets, cancelReservation } from '../../api/tickets';
+import { createCheckoutSession } from '../../api/payment';
 import type { TicketTypeResponse } from '../../types/TicketType';
 import type { EventResponse } from '../../types/EventResponse';
 import type { TicketReservationResponse } from '../../types/TicketReservation';
@@ -37,7 +37,6 @@ export function TicketPurchaseDrawer({
                                          onClose,
                                          event,
                                      }: TicketPurchaseDrawerProps) {
-    const navigate = useNavigate();
     const eventId = Number(event.eventId);
 
     const [ticketTypes, setTicketTypes] = useState<TicketTypeResponse[]>([]);
@@ -107,30 +106,19 @@ export function TicketPurchaseDrawer({
                     quantity: qty,
                 })),
             });
-            await confirmReservation(reservation.purchaseId, email, name);
-            onClose();
-            navigate('/ticket/confirmation', {
-                state: {
-                    reservation,
-                    buyerName: name,
-                    buyerEmail: email,
-                    event: {
-                        title: event.title,
-                        startDatetime: event.startDatetime,
-                        endDatetime: event.endDatetime,
-                        venue: event.venue,
-                        auditoriumName: event.auditoriumName,
-                        images: event.images,
-                    },
-                },
+            const { checkoutUrl } = await createCheckoutSession({
+                purchaseId: reservation.purchaseId,
+                buyerName: name,
+                buyerEmail: email,
             });
+            // Redirect to Stripe Checkout — page will not return here
+            window.location.href = checkoutUrl;
         } catch (err) {
             if (reservation) {
                 cancelReservation(reservation.purchaseId).catch(() => {});
             }
-            setSubmitError(err instanceof Error ? err.message : 'Purchase failed');
-        } finally {
             setSubmitting(false);
+            setSubmitError(err instanceof Error ? err.message : 'Purchase failed');
         }
     }
 
@@ -347,7 +335,7 @@ export function TicketPurchaseDrawer({
                         {submitting ? (
                             <CircularProgress size={22} sx={{ color: 'black' }} />
                         ) : (
-                            `Confirm Purchase · €${totalPrice.toFixed(2)}`
+                            `Pay with Stripe · €${totalPrice.toFixed(2)}`
                         )}
                     </Button>
                 </Box>
