@@ -123,9 +123,21 @@ public class StripeServiceImpl implements IStripeService {
         }
 
         if ("checkout.session.completed".equals(event.getType())) {
-            Session session = (Session) event.getDataObjectDeserializer()
-                    .getObject()
-                    .orElseThrow(() -> new IllegalStateException("Could not deserialize Stripe session"));
+            com.stripe.model.EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
+            Session session;
+            try {
+                session = (Session) deserializer.getObject()
+                        .orElseGet(() -> {
+                            try {
+                                return (Session) deserializer.deserializeUnsafe();
+                            } catch (com.stripe.exception.StripeException ex) {
+                                throw new RuntimeException("Could not deserialize Stripe session", ex);
+                            }
+                        });
+            } catch (RuntimeException e) {
+                log.error("Failed to deserialize Stripe checkout session: {}", e.getMessage());
+                return;
+            }
 
             String purchaseIdStr = session.getMetadata().get("purchaseId");
             if (purchaseIdStr == null) {
@@ -149,6 +161,25 @@ public class StripeServiceImpl implements IStripeService {
             ticketService.confirmTicketReservation(purchaseId, purchase.getBuyerEmail(), purchase.getBuyerName());
 
             log.info("Purchase {} confirmed via Stripe webhook", purchaseId);
+        }
+    }
+
+    @Override
+    public void syncSessionIfPaid(Purchase purchase) {
+        if (purchase.getStripeSessionId() == null) return;
+        try {
+            Session session = Session.retrieve(purchase.getStripeSessionId());
+            log.info("Stripe session {} payment_status={} for purchase {}", session.getId(), session.getPaymentStatus(), purchase.getPurchaseId());
+            if ("paid".equals(session.getPaymentStatus())) {
+                if (session.getPaymentIntent() != null) {
+                    purchase.setProviderTransactionId(session.getPaymentIntent());
+                    purchaseRepository.save(purchase);
+                }
+                ticketService.confirmTicketReservation(purchase.getPurchaseId(), purchase.getBuyerEmail(), purchase.getBuyerName());
+                log.info("Purchase {} confirmed via Stripe session sync fallback", purchase.getPurchaseId());
+            }
+        } catch (StripeException e) {
+            log.warn("Failed to sync Stripe session for purchase {}: {}", purchase.getPurchaseId(), e.getMessage());
         }
     }
 }

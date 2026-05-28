@@ -12,6 +12,7 @@ import com.pamestinukai.backend.repositories.PurchaseRepository;
 import com.pamestinukai.backend.repositories.TicketRepository;
 import com.pamestinukai.backend.services.interfaces.IStripeService;
 import com.stripe.exception.StripeException;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,7 +20,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -49,15 +52,21 @@ public class PaymentController {
 
     @PostMapping("/webhook")
     public ResponseEntity<Void> stripeWebhook(
-            @RequestBody String payload,
+            HttpServletRequest request,
             @RequestHeader("Stripe-Signature") String sigHeader) {
+        log.info("Stripe webhook received, sig header present: {}", sigHeader != null);
         try {
+            String payload = new String(request.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
             stripeService.handleWebhookEvent(payload, sigHeader);
             return ResponseEntity.ok().build();
         } catch (SecurityException e) {
+            log.warn("Stripe webhook signature invalid");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        } catch (IOException e) {
+            log.error("Failed to read Stripe webhook body: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         } catch (Exception e) {
-            log.error("Error handling Stripe webhook: {}", e.getMessage());
+            log.error("Error handling Stripe webhook: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -66,6 +75,13 @@ public class PaymentController {
     public ResponseEntity<PurchaseSummaryResponseDTO> getPurchaseSummary(@PathVariable Long purchaseId) {
         Purchase purchase = purchaseRepository.findById(purchaseId)
                 .orElseThrow(() -> new ResourceNotFoundException("Purchase not found"));
+
+        // Webhook fallback: if still PENDING, ask Stripe directly whether payment succeeded
+        if (purchase.getStatus() == Purchase.PurchaseStatus.PENDING && purchase.getStripeSessionId() != null) {
+            stripeService.syncSessionIfPaid(purchase);
+            // Reload after potential confirmation
+            purchase = purchaseRepository.findById(purchaseId).orElseThrow();
+        }
 
         List<Ticket> tickets = ticketRepository.findAllByPurchase(purchase);
         if (tickets.isEmpty()) {
