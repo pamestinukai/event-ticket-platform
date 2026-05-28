@@ -23,8 +23,10 @@ public class Purchase {
     private String currency;
     private String paymentProvider;
     private String providerTransactionId;
+    private String stripeSessionId;
 
     @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "varchar(255)")
     private PurchaseStatus status;
 
     private LocalDateTime createdAt;

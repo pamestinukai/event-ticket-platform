@@ -19,3 +19,8 @@ MAIL_FROM_NAME=Pamestinukai
 
 # Set to true to expose POST /api/dev/email/test (open auth) for manual testing. Keep false otherwise.
 app.mail.dev-endpoint=false
+
+# Stripe (sandbox/test keys only)
+STRIPE_SECRET_KEY=sk_test_replace_with_your_test_secret_key
+STRIPE_WEBHOOK_SECRET=whsec_replace_with_your_webhook_signing_secret
+FRONTEND_URL=http://localhost:5173
