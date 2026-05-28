@@ -10,6 +10,7 @@ import com.pamestinukai.backend.entities.TicketType;
 import com.pamestinukai.backend.exceptions.EventStatusException;
 import com.pamestinukai.backend.exceptions.ResourceNotFoundException;
 import com.pamestinukai.backend.repositories.*;
+import com.pamestinukai.backend.services.interfaces.IEventNotificationService;
 import com.pamestinukai.backend.services.interfaces.IEventService;
 import com.pamestinukai.backend.services.interfaces.ITicketTypeService;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +25,7 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 @Service
@@ -55,6 +57,7 @@ public class EventService implements IEventService {
     private final TicketRepository ticketRepository;
     private final TicketTypeRepository ticketTypeRepository;
     private final ITicketTypeService ticketTypeService;
+    private final IEventNotificationService eventNotificationService;
 
     @Transactional(readOnly = true)
     public List<Event> getAvailableEvents() {
@@ -144,11 +147,36 @@ public class EventService implements IEventService {
     public Event updateEvent(Long id, EventRequestDTO dto) {
         validateEventTime(dto);
         Event event = getEvent(id);
+        Event.EventStatus oldStatus = event.getStatus();
+        LocalDateTime oldStartDatetime = event.getStartDatetime();
+
         mapToEntity(event, dto);
         event.setUpdatedAt(LocalDateTime.now());
         Event saved = eventRepository.save(event);
         ticketTypeService.syncForEvent(saved, dto.getTicketTypes());
+
+        notifyOnLifecycleChange(saved, oldStatus, oldStartDatetime);
         return saved;
+    }
+
+    private void notifyOnLifecycleChange(Event saved, Event.EventStatus oldStatus, LocalDateTime oldStart) {
+        boolean canceled = oldStatus != Event.EventStatus.CANCELED
+                && saved.getStatus() == Event.EventStatus.CANCELED;
+        if (canceled) {
+            eventNotificationService.notifyCancellation(saved);
+            return;
+        }
+
+        boolean targetIsLive = saved.getStatus() != Event.EventStatus.DRAFT
+                && saved.getStatus() != Event.EventStatus.CANCELED
+                && saved.getStatus() != Event.EventStatus.COMPLETED;
+        boolean dateChanged = !Objects.equals(oldStart, saved.getStartDatetime());
+        boolean statusChangedToRescheduled = oldStatus != Event.EventStatus.RESCHEDULED
+                && saved.getStatus() == Event.EventStatus.RESCHEDULED;
+
+        if (targetIsLive && (dateChanged || statusChangedToRescheduled)) {
+            eventNotificationService.notifyReschedule(saved);
+        }
     }
 
     public void deleteEvent(Long id) {
