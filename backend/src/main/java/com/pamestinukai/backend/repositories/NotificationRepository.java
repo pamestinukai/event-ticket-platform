@@ -14,4 +14,10 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             Notification.NotificationStatus status,
             LocalDateTime scheduledAt
     );
+
+    boolean existsByPurchase_PurchaseIdAndEvent_EventIdAndType(
+            Long purchaseId,
+            Long eventId,
+            Notification.NotificationType type
+    );
 }

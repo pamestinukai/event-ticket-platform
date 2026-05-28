@@ -62,6 +62,9 @@ public class TicketService implements ITicketService {
    @Value("${app.mail.retry.delay-minutes:5}")
    private long emailRetryDelayMinutes;
 
+   @Value("${app.reminder.lead-hours:24}")
+   private long reminderLeadHours;
+
    private static final DateTimeFormatter EVENT_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
    public TicketReservationResponseDTO reserveTicket(TicketReservationRequestDTO dto){
@@ -146,7 +149,39 @@ public class TicketService implements ITicketService {
       notificationRepository.save(notification);
       sendPurchaseEmailWithRetryState(purchase, tickets, notification);
 
+      scheduleReminderNotification(purchase, representativeTicket);
+
       log.info("Tickets confirmed for purchase id: {}", purchaseId);
+   }
+
+   private void scheduleReminderNotification(Purchase purchase, Ticket representativeTicket) {
+      Event event = representativeTicket.getTicketType().getEvent();
+      if (event.getStartDatetime() == null
+              || event.getStatus() == Event.EventStatus.CANCELED
+              || event.getStatus() == Event.EventStatus.COMPLETED) {
+         return;
+      }
+
+      LocalDateTime reminderAt = event.getStartDatetime().minusHours(reminderLeadHours);
+      if (!reminderAt.isAfter(LocalDateTime.now())) {
+         return;
+      }
+
+      if (notificationRepository.existsByPurchase_PurchaseIdAndEvent_EventIdAndType(
+              purchase.getPurchaseId(), event.getEventId(), Notification.NotificationType.REMINDER)) {
+         return;
+      }
+
+      Notification reminder = new Notification();
+      reminder.setPurchase(purchase);
+      reminder.setEvent(event);
+      reminder.setTicket(representativeTicket);
+      reminder.setType(Notification.NotificationType.REMINDER);
+      reminder.setStatus(Notification.NotificationStatus.SCHEDULED);
+      reminder.setScheduledAt(reminderAt);
+      reminder.setAttemptCount(0);
+      notificationRepository.save(reminder);
+      log.info("Reminder scheduled for purchase {} at {}", purchase.getPurchaseId(), reminderAt);
    }
 
    @Override
