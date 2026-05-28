@@ -156,7 +156,7 @@ export function QrScannerDialog({ open, onClose }: Props) {
         switch (status) {
             case 'VALID': return 'Valid - not yet checked in';
             case 'CHECKED_IN': return 'Already checked in';
-            case 'RESERVED': return 'Reserved — payment not completed';
+            case 'RESERVED': return 'Reserved - payment not completed';
             case 'CANCELED': return 'Canceled';
             case 'REFUNDED': return 'Refunded';
             default: return status;
