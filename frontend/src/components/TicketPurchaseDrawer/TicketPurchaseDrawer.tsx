@@ -127,8 +127,8 @@ export function TicketPurchaseDrawer({
             anchor='right'
             open={open}
             onClose={onClose}
-            PaperProps={{
-                sx: { width: { xs: '100vw', sm: 420 }, p: 0, display: 'flex', flexDirection: 'column' },
+            slotProps={{
+                paper: { sx: { width: { xs: '100vw', sm: 420 }, p: 0, display: 'flex', flexDirection: 'column' } },
             }}
         >
             {/* Header */}
