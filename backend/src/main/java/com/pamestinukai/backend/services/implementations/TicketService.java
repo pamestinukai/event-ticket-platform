@@ -3,29 +3,42 @@ package com.pamestinukai.backend.services.implementations;
 import com.pamestinukai.backend.dtos.TicketReservationItemDTO;
 import com.pamestinukai.backend.dtos.request.TicketReservationRequestDTO;
 import com.pamestinukai.backend.dtos.response.TicketReservationResponseDTO;
+import com.pamestinukai.backend.dtos.response.TicketValidationResponseDTO;
+import com.pamestinukai.backend.entities.CheckIn;
 import com.pamestinukai.backend.entities.Event;
+import com.pamestinukai.backend.entities.Notification;
 import com.pamestinukai.backend.entities.Purchase;
 import com.pamestinukai.backend.entities.Ticket;
 import com.pamestinukai.backend.entities.TicketType;
+import com.pamestinukai.backend.exceptions.DuplicateTicketTokenException;
 import com.pamestinukai.backend.exceptions.InvalidTicketStatusException;
+import com.pamestinukai.backend.exceptions.InvalidTicketTokenException;
 import com.pamestinukai.backend.exceptions.ResourceNotFoundException;
 import com.pamestinukai.backend.mappers.TicketMapper;
+import com.pamestinukai.backend.repositories.CheckInRepository;
 import com.pamestinukai.backend.repositories.EventRepository;
+import com.pamestinukai.backend.repositories.NotificationRepository;
 import com.pamestinukai.backend.repositories.PurchaseRepository;
 import com.pamestinukai.backend.repositories.TicketRepository;
 import com.pamestinukai.backend.repositories.TicketTypeRepository;
+import com.pamestinukai.backend.services.email.EmailAttachment;
+import com.pamestinukai.backend.services.email.EmailMessage;
+import com.pamestinukai.backend.services.interfaces.IEmailService;
 import com.pamestinukai.backend.services.interfaces.ITicketService;
 import com.pamestinukai.backend.services.interfaces.ITicketTypeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
@@ -39,7 +52,17 @@ public class TicketService implements ITicketService {
    private final TicketTypeRepository ticketTypeRepository;
    private final EventRepository eventRepository;
    private final PurchaseRepository purchaseRepository;
+   private final NotificationRepository notificationRepository;
+   private final CheckInRepository checkInRepository;
    private final TicketMapper ticketMapper;
+   private final IEmailService emailService;
+   private final TicketQrCodeService ticketQrCodeService;
+   private final TicketPdfService ticketPdfService;
+
+   @Value("${app.mail.retry.delay-minutes:5}")
+   private long emailRetryDelayMinutes;
+
+   private static final DateTimeFormatter EVENT_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
    public TicketReservationResponseDTO reserveTicket(TicketReservationRequestDTO dto){
 
@@ -82,8 +105,20 @@ public class TicketService implements ITicketService {
    }
 
    public void confirmTicketReservation(Long purchaseId){
+      confirmTicketReservation(purchaseId, null, null);
+   }
+
+   @Override
+   public void confirmTicketReservation(Long purchaseId, String buyerEmail, String buyerName){
       Purchase purchase = purchaseRepository.findById(purchaseId)
               .orElseThrow(() -> new ResourceNotFoundException("Purchase not found"));
+
+      if (buyerEmail != null && !buyerEmail.isBlank()) {
+         purchase.setBuyerEmail(buyerEmail);
+      }
+      if (buyerName != null && !buyerName.isBlank()) {
+         purchase.setBuyerName(buyerName);
+      }
 
       if (purchase.getStatus() != Purchase.PurchaseStatus.PENDING)
          throw new InvalidTicketStatusException("Purchase has already been made or cancelled");
@@ -94,11 +129,55 @@ public class TicketService implements ITicketService {
          if (ticket.getStatus() != Ticket.TicketStatus.RESERVED)
             throw new InvalidTicketStatusException("The ticket is already valid or canceled");
          ticket.setStatus(Ticket.TicketStatus.VALID);
+         if (ticket.getQrToken() == null || ticket.getQrToken().isBlank()) {
+            ticket.setQrToken(generateUniqueQrToken());
+         }
       }
-      // call method to generate qrToken (TO DO)
 
       ticketRepository.saveAll(tickets);
+
+      purchase.setStatus(Purchase.PurchaseStatus.COMPLETED);
+      purchaseRepository.save(purchase);
+
+      for (Ticket ticket : tickets) {
+         Notification notification = createConfirmationNotification(ticket);
+         notificationRepository.save(notification);
+         sendTicketEmailWithRetryState(ticket, notification);
+      }
+
       log.info("Tickets confirmed for purchase id: {}", purchaseId);
+   }
+
+   @Override
+   public TicketValidationResponseDTO validateTicketToken(String qrToken) {
+      Ticket ticket = resolveTicketByToken(qrToken);
+      if (ticket.getStatus() == Ticket.TicketStatus.CANCELED || ticket.getStatus() == Ticket.TicketStatus.REFUNDED) {
+         throw new InvalidTicketStatusException("Ticket is no longer active");
+      }
+      return toValidationResponse(ticket);
+   }
+
+   @Override
+   public TicketValidationResponseDTO checkInTicket(String qrToken) {
+      Ticket ticket = resolveTicketByToken(qrToken);
+
+      if (ticket.getStatus() == Ticket.TicketStatus.CHECKED_IN || checkInRepository.existsByTicket(ticket)) {
+         throw new InvalidTicketStatusException("Ticket has already been checked in");
+      }
+
+      if (ticket.getStatus() != Ticket.TicketStatus.VALID) {
+         throw new InvalidTicketStatusException("Ticket is not valid for check-in");
+      }
+
+      CheckIn checkIn = new CheckIn();
+      checkIn.setTicket(ticket);
+      checkIn.setScannedAt(LocalDateTime.now());
+      checkIn.setScanResult(CheckIn.ScanResult.SUCCESS);
+      checkInRepository.save(checkIn);
+
+      ticket.setStatus(Ticket.TicketStatus.CHECKED_IN);
+      ticketRepository.save(ticket);
+      return toValidationResponse(ticket);
    }
 
    private Map<Long, TicketType> fetchAndValidateTicketTypes(TicketReservationRequestDTO dto) {
@@ -141,6 +220,7 @@ public class TicketService implements ITicketService {
             ticket.setTicketType(ticketType);
             ticket.setStatus(Ticket.TicketStatus.RESERVED);
             ticket.setPurchase(purchase);
+            ticket.setQrToken(generateUniqueQrToken());
             ticket.setIssuedAt(LocalDateTime.now());
             ticket.setQrToken(java.util.UUID.randomUUID().toString());
             tickets.add(ticket);
@@ -158,5 +238,114 @@ public class TicketService implements ITicketService {
          totalPrice = totalPrice.add(tt.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
       }
       return totalPrice;
+   }
+
+   private Ticket resolveTicketByToken(String qrToken) {
+      long duplicates = ticketRepository.countByQrToken(qrToken);
+      if (duplicates > 1) {
+         throw new DuplicateTicketTokenException("Duplicate ticket token detected");
+      }
+
+      return ticketRepository.findFirstByQrToken(qrToken)
+              .orElseThrow(() -> new InvalidTicketTokenException("Ticket token is invalid"));
+   }
+
+   private Notification createConfirmationNotification(Ticket ticket) {
+      Notification notification = new Notification();
+      notification.setPurchase(ticket.getPurchase());
+      notification.setEvent(ticket.getTicketType().getEvent());
+      notification.setTicket(ticket);
+      notification.setType(Notification.NotificationType.CONFIRMATION);
+      notification.setStatus(Notification.NotificationStatus.SCHEDULED);
+      notification.setScheduledAt(LocalDateTime.now());
+      notification.setAttemptCount(0);
+      return notification;
+   }
+
+   private void sendTicketEmailWithRetryState(Ticket ticket, Notification notification) {
+      try {
+         String recipient = ticket.getPurchase().getBuyerEmail();
+         if (recipient == null || recipient.isBlank()) {
+            throw new IllegalStateException("Buyer email is missing for purchase " + ticket.getPurchase().getPurchaseId());
+         }
+
+         byte[] qrCodePng = ticketQrCodeService.generatePng(ticket.getQrToken());
+         byte[] ticketPdf = ticketPdfService.generateTicketPdf(ticket, qrCodePng);
+
+         emailService.send(EmailMessage.builder()
+                 .to(recipient)
+                 .subject("Your ticket for " + ticket.getTicketType().getEvent().getTitle())
+                 .templateName("ticket")
+                 .variable("recipientName", defaultValue(ticket.getPurchase().getBuyerName(), "there"))
+                 .variable("eventTitle", defaultValue(ticket.getTicketType().getEvent().getTitle(), "Event"))
+                 .variable("eventDate", formatEventDate(ticket.getTicketType().getEvent()))
+                 .variable("venue", formatVenue(ticket.getTicketType().getEvent()))
+                 .variable("ticketType", defaultValue(ticket.getTicketType().getName(), "General"))
+                 .variable("ticketId", ticket.getQrToken())
+                 .attachment(EmailAttachment.pdf("ticket-" + ticket.getTicketId() + ".pdf", ticketPdf))
+                 .build());
+
+         notification.setStatus(Notification.NotificationStatus.SENT);
+         notification.setSentAt(LocalDateTime.now());
+         notification.setLastError(null);
+      } catch (Exception ex) {
+         notification.setStatus(Notification.NotificationStatus.FAILED);
+         notification.setAttemptCount(notification.getAttemptCount() == null ? 1 : notification.getAttemptCount() + 1);
+         notification.setLastError(truncateError(ex.getMessage()));
+         notification.setScheduledAt(LocalDateTime.now().plusMinutes(emailRetryDelayMinutes));
+         log.error("Failed to send ticket email for ticket {}", ticket.getTicketId(), ex);
+      }
+
+      notificationRepository.save(notification);
+   }
+
+   private TicketValidationResponseDTO toValidationResponse(Ticket ticket) {
+      TicketValidationResponseDTO response = new TicketValidationResponseDTO();
+      response.setTicketId(ticket.getTicketId());
+      response.setEventTitle(defaultValue(ticket.getTicketType().getEvent().getTitle(), "Unknown event"));
+      response.setEventDate(formatEventDate(ticket.getTicketType().getEvent()));
+      response.setVenue(formatVenue(ticket.getTicketType().getEvent()));
+      response.setBuyerName(defaultValue(ticket.getPurchase().getBuyerName(), "Guest"));
+      response.setTicketType(defaultValue(ticket.getTicketType().getName(), "General"));
+      response.setStatus(ticket.getStatus().name());
+      response.setToken(ticket.getQrToken());
+      return response;
+   }
+
+   private String generateUniqueQrToken() {
+      String token = UUID.randomUUID().toString();
+      while (ticketRepository.countByQrToken(token) > 0) {
+         token = UUID.randomUUID().toString();
+      }
+      return token;
+   }
+
+   private static String defaultValue(String value, String fallback) {
+      return value == null || value.isBlank() ? fallback : value;
+   }
+
+   private static String formatEventDate(Event event) {
+      if (event.getStartDatetime() == null) {
+         return "TBA";
+      }
+      return event.getStartDatetime().format(EVENT_DATE_FORMAT);
+   }
+
+   private static String formatVenue(Event event) {
+      if (event.getVenue() == null) {
+         return "TBA";
+      }
+
+      String venueName = defaultValue(event.getVenue().getName(), "Unknown venue");
+      String city = defaultValue(event.getVenue().getCity(), "");
+      String address = defaultValue(event.getVenue().getAddress(), "");
+      return (venueName + " " + city + " " + address).trim();
+   }
+
+   private static String truncateError(String errorMessage) {
+      if (errorMessage == null || errorMessage.isBlank()) {
+         return "Email delivery failed";
+      }
+      return errorMessage.length() > 1000 ? errorMessage.substring(0, 1000) : errorMessage;
    }
 }

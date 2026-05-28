@@ -30,6 +30,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/events/public/**").permitAll()
                         .requestMatchers("/api/events/*/ticket-types").permitAll()
                         .requestMatchers("/api/categories").permitAll()
+                        .requestMatchers("/api/dev/**").permitAll()
                         .requestMatchers("/api/tickets/**").permitAll()
                         .anyRequest().authenticated()
                 )
