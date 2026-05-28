@@ -8,6 +8,7 @@ import { Auth } from './pages/Auth/Auth';
 import { Dashboard } from './pages/Dashboard/Dashboard';
 import { EventCreate } from './pages/EventCreate/EventCreate';
 import { EventEdit } from './pages/EventEdit/EventEdit';
+import { EventAnalyticsPage } from './pages/EventAnalytics/EventAnalytics';
 import { EventPage } from './pages/Event/Event.tsx';
 import { TicketConfirmationPage } from './pages/TicketConfirmation/TicketConfirmationPage.tsx';
 
@@ -15,9 +16,7 @@ function App() {
   return (
       <BrowserRouter>
         <AuthProvider>
-          <Box
-              sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}
-          >
+          <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
             <Routes>
               <Route path='/' element={<><HomePage /><Footer /></>} />
               <Route path='/auth' element={<Auth />} />
@@ -27,6 +26,7 @@ function App() {
                 <Route path='/dashboard' element={<Dashboard />} />
                 <Route path='/events/new' element={<EventCreate />} />
                 <Route path='/events/:id/edit' element={<EventEdit />} />
+                <Route path='/events/:id/analytics' element={<EventAnalyticsPage />} />
               </Route>
               <Route path='*' element={<Navigate to='/' replace />} />
             </Routes>

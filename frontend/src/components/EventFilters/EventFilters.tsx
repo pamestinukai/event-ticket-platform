@@ -92,10 +92,9 @@ export function EventFiltersPanel({
 
       <Stack
         direction={{ xs: 'column', sm: 'row' }}
-        flexWrap='wrap'
         useFlexGap
         spacing={1.5}
-        sx={{ mb: activeCount > 0 ? 1.5 : 0 }}
+        sx={{ mb: activeCount > 0 ? 1.5 : 0, flexWrap: 'wrap' }}
       >
         {/* Category */}
         <FormControl size='small' sx={{ minWidth: 160 }}>
@@ -106,7 +105,7 @@ export function EventFiltersPanel({
             onChange={(e) =>
               set({
                 categoryId:
-                  e.target.value === ''
+                  String(e.target.value) === ''
                     ? null
                     : Number(e.target.value),
               })
@@ -202,9 +201,9 @@ export function EventFiltersPanel({
       {activeCount > 0 && (
         <Stack
           direction='row'
-          flexWrap='wrap'
           useFlexGap
           spacing={0.75}
+          sx={{ flexWrap: 'wrap' }}
         >
           {filters.categoryId != null && (
             <Chip

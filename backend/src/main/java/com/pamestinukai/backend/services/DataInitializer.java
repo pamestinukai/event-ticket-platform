@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Component
@@ -21,6 +22,9 @@ public class DataInitializer implements CommandLineRunner {
     private final AuditoriumRepository auditoriumRepository;
     private final CategoryRepository categoryRepository;
     private final TicketTypeRepository ticketTypeRepository;
+    private final TicketRepository ticketRepository;
+    private final PurchaseRepository purchaseRepository;
+    private final CheckInRepository checkInRepository;
     private final EventRepository eventRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -33,8 +37,8 @@ public class DataInitializer implements CommandLineRunner {
             return;
         }
 
-        // if there are rows in events repository then initialization is skipped
-        if (eventRepository.count() > 0) return;
+        // seed the full demo dataset only once
+        if (eventRepository.count() == 0) {
 
         // --- Categories ---
         Category music = new Category();
@@ -255,6 +259,128 @@ public class DataInitializer implements CommandLineRunner {
         hamletStandard.setAvailableQuantity(2000);
         ticketTypeRepository.save(hamletStandard);
 
+            seedPastAnalyticsEvent(org1, venue1, aud1, music);
+            System.out.println("Data initialized successfully");
+            return;
+        }
+
+        // allow already-initialized environments to get analytics demo data as well
+        Organization organization = organizationRepository.findAll().stream().findFirst().orElse(null);
+        Venue venue = venueRepository.findAll().stream().findFirst().orElse(null);
+        Auditorium auditorium = auditoriumRepository.findAll().stream().findFirst().orElse(null);
+        Category category = categoryRepository.findAll().stream().findFirst().orElse(null);
+
+        if (organization == null || venue == null || auditorium == null || category == null) {
+            System.out.println("Data init skipped: missing organization/venue/auditorium/category for analytics demo event");
+            return;
+        }
+
+        seedPastAnalyticsEvent(organization, venue, auditorium, category);
         System.out.println("Data initialized successfully");
+    }
+
+    private void seedPastAnalyticsEvent(
+            Organization organization,
+            Venue venue,
+            Auditorium auditorium,
+            Category category
+    ) {
+        String demoTitle = "Demo Past Event For Analytics";
+        boolean alreadyExists = eventRepository.findAll().stream()
+                .anyMatch(event -> demoTitle.equals(event.getTitle()));
+        if (alreadyExists) {
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+
+        Event event = new Event();
+        event.setTitle(demoTitle);
+        event.setDescription("Seeded event to demonstrate organizer analytics for a past event.");
+        event.setOrganization(organization);
+        event.setVenue(venue);
+        event.setAuditorium(auditorium);
+        event.setCategory(category);
+        event.setPerformers(List.of("Demo Band", "Guest Artist"));
+        event.setImages(List.of("https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f"));
+        event.setStatus(Event.EventStatus.COMPLETED);
+        event.setStartDatetime(now.minusDays(20));
+        event.setEndDatetime(now.minusDays(20).plusHours(3));
+        event.setCreatedAt(now);
+        event.setUpdatedAt(now);
+        eventRepository.save(event);
+
+        TicketType vip = new TicketType();
+        vip.setEvent(event);
+        vip.setName("VIP");
+        vip.setPrice(new BigDecimal("120.00"));
+        vip.setTotalQuantity(50);
+        vip.setAvailableQuantity(35);
+        ticketTypeRepository.save(vip);
+
+        TicketType regular = new TicketType();
+        regular.setEvent(event);
+        regular.setName("Regular");
+        regular.setPrice(new BigDecimal("40.00"));
+        regular.setTotalQuantity(120);
+        regular.setAvailableQuantity(80);
+        ticketTypeRepository.save(regular);
+
+        Purchase vipPurchase = new Purchase();
+        vipPurchase.setBuyerName("VIP Buyer");
+        vipPurchase.setBuyerEmail("vip-buyer@example.com");
+        vipPurchase.setTotalAmount(new BigDecimal("1800.00"));
+        vipPurchase.setCurrency("EUR");
+        vipPurchase.setPaymentProvider("demo");
+        vipPurchase.setProviderTransactionId("demo-vip-" + event.getEventId());
+        vipPurchase.setStatus(Purchase.PurchaseStatus.COMPLETED);
+        vipPurchase.setCreatedAt(now.minusDays(21));
+        purchaseRepository.save(vipPurchase);
+
+        Purchase regularPurchase = new Purchase();
+        regularPurchase.setBuyerName("Regular Buyer");
+        regularPurchase.setBuyerEmail("regular-buyer@example.com");
+        regularPurchase.setTotalAmount(new BigDecimal("1600.00"));
+        regularPurchase.setCurrency("EUR");
+        regularPurchase.setPaymentProvider("demo");
+        regularPurchase.setProviderTransactionId("demo-regular-" + event.getEventId());
+        regularPurchase.setStatus(Purchase.PurchaseStatus.COMPLETED);
+        regularPurchase.setCreatedAt(now.minusDays(21));
+        purchaseRepository.save(regularPurchase);
+
+        List<Ticket> tickets = new ArrayList<>();
+        for (int i = 1; i <= 15; i++) {
+            Ticket ticket = new Ticket();
+            ticket.setPurchase(vipPurchase);
+            ticket.setTicketType(vip);
+            ticket.setQrToken("demo-" + event.getEventId() + "-vip-" + i);
+            ticket.setStatus(i <= 12 ? Ticket.TicketStatus.CHECKED_IN : Ticket.TicketStatus.VALID);
+            ticket.setIssuedAt(now.minusDays(21));
+            tickets.add(ticket);
+        }
+
+        for (int i = 1; i <= 40; i++) {
+            Ticket ticket = new Ticket();
+            ticket.setPurchase(regularPurchase);
+            ticket.setTicketType(regular);
+            ticket.setQrToken("demo-" + event.getEventId() + "-regular-" + i);
+            ticket.setStatus(i <= 30 ? Ticket.TicketStatus.CHECKED_IN : Ticket.TicketStatus.VALID);
+            ticket.setIssuedAt(now.minusDays(21));
+            tickets.add(ticket);
+        }
+
+        List<Ticket> savedTickets = ticketRepository.saveAll(tickets);
+
+        List<CheckIn> checkIns = savedTickets.stream()
+                .filter(ticket -> ticket.getStatus() == Ticket.TicketStatus.CHECKED_IN)
+                .map(ticket -> {
+                    CheckIn checkIn = new CheckIn();
+                    checkIn.setTicket(ticket);
+                    checkIn.setScannedAt(now.minusDays(20).plusHours(1));
+                    checkIn.setScanResult(CheckIn.ScanResult.SUCCESS);
+                    return checkIn;
+                })
+                .toList();
+        checkInRepository.saveAll(checkIns);
     }
 }

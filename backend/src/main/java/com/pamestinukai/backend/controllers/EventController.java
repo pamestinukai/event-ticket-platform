@@ -2,6 +2,7 @@ package com.pamestinukai.backend.controllers;
 
 import com.pamestinukai.backend.dtos.request.EventRequestDTO;
 import com.pamestinukai.backend.dtos.request.EventFilterRequestDTO;
+import com.pamestinukai.backend.dtos.response.EventAnalyticsResponseDTO;
 import com.pamestinukai.backend.dtos.response.EventResponseDTO;
 import com.pamestinukai.backend.entities.Employee;
 import com.pamestinukai.backend.entities.Event;
@@ -69,6 +70,20 @@ public class EventController {
     public ResponseEntity<EventResponseDTO> getEventById(@PathVariable Long id) {
         Event event = eventService.getEvent(id);
         return ResponseEntity.ok(eventResponseMapper.toDTO(event));
+    }
+
+    @GetMapping("/{id}/analytics")
+    public ResponseEntity<EventAnalyticsResponseDTO> getEventAnalytics(
+            @PathVariable Long id,
+            @AuthenticationPrincipal Employee employee) {
+        if (employee == null || employee.getOrganization() == null) {
+            return ResponseEntity.status(403).build();
+        }
+        EventAnalyticsResponseDTO analytics = eventService.getEventAnalytics(
+                id,
+                employee.getOrganization().getOrganizationId()
+        );
+        return ResponseEntity.ok(analytics);
     }
 
     @GetMapping("/public/{id}")
