@@ -39,8 +39,8 @@ export function EventSearchBar({ onSearch }: EventSearchBarProps) {
       value={inputValue}
       onChange={e => setInputValue(e.target.value)}
       onKeyDown={e => { if (e.key === "Enter") commit(); }}
-      inputProps={{ "aria-label": "Search events" }}
       slotProps={{
+        htmlInput: { "aria-label": "Search events" },
         input: {
           startAdornment: (
             <InputAdornment position="start">
