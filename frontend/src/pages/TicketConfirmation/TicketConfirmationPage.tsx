@@ -18,12 +18,13 @@ import EmailIcon from '@mui/icons-material/Email';
 import ConfirmationNumberIcon from '@mui/icons-material/ConfirmationNumber';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate, Navigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import QRCode from 'qrcode';
 import { jsPDF } from 'jspdf';
 import { Header } from '../../components/Header/Header';
 import { Footer } from '../../components/Footer/Footer';
 import { getTicketsByPurchase } from '../../api/tickets';
+import { getPurchaseSummary } from '../../api/payment';
 import type { TicketReservationResponse } from '../../types/TicketReservation';
 import type { TicketResponse } from '../../types/TicketResponse';
 import type { VenueResponse } from '../../types/VenueResponse';
@@ -211,21 +212,135 @@ function TicketCard({
 export function TicketConfirmationPage() {
     const location = useLocation();
     const navigate = useNavigate();
-    const state = location.state as ConfirmationState | null;
+    const [searchParams] = useSearchParams();
+
+    // Stripe redirect passes purchaseId as a URL query param
+    const purchaseIdFromUrl = searchParams.get('purchaseId');
+
+    // Legacy flow passes state via react-router navigate
+    const routerState = location.state as ConfirmationState | null;
+
+    // Normalised page data (populated from either source)
+    const [pageData, setPageData] = useState<ConfirmationState | null>(routerState);
+    const [loadingPageData, setLoadingPageData] = useState<boolean>(!!purchaseIdFromUrl && !routerState);
+    const [pageDataError, setPageDataError] = useState<string | null>(null);
 
     const [tickets, setTickets] = useState<TicketResponse[]>([]);
     const [loadingTickets, setLoadingTickets] = useState(true);
     const [ticketsError, setTicketsError] = useState<string | null>(null);
 
-    if (!state) return <Navigate to='/' replace />;
-    const { reservation, buyerName, buyerEmail, event } = state;
-
+    // When arriving from Stripe redirect, fetch the purchase summary and poll until COMPLETED
     useEffect(() => {
-        getTicketsByPurchase(reservation.purchaseId)
+        if (!purchaseIdFromUrl || routerState) return;
+
+        const purchaseId = Number(purchaseIdFromUrl);
+        let attempts = 0;
+        const MAX_ATTEMPTS = 12; // 12 × 2.5 s = 30 s max
+        let timeoutId: ReturnType<typeof setTimeout>;
+
+        async function fetchSummary() {
+            try {
+                const summary = await getPurchaseSummary(purchaseId);
+
+                if (summary.status === 'PENDING' && attempts < MAX_ATTEMPTS) {
+                    attempts++;
+                    timeoutId = setTimeout(fetchSummary, 2500);
+                    return;
+                }
+
+                if (summary.status !== 'COMPLETED') {
+                    setPageDataError('Payment was not completed. If you were charged, please contact support.');
+                    setLoadingPageData(false);
+                    return;
+                }
+
+                // Build a ConfirmationState-compatible object from the summary
+                const syntheticState: ConfirmationState = {
+                    reservation: {
+                        purchaseId: summary.purchaseId,
+                        eventId: summary.eventId,
+                        eventName: summary.eventName,
+                        tickets: summary.tickets.map((t) => ({
+                            ticketTypeId: t.ticketTypeId,
+                            ticketTypeName: t.ticketTypeName,
+                            quantity: t.quantity,
+                            pricePerTicket: t.pricePerTicket,
+                        })),
+                        totalPrice: summary.totalPrice,
+                        currency: summary.currency,
+                        expiresAt: '',
+                    },
+                    buyerName: summary.buyerName ?? '',
+                    buyerEmail: summary.buyerEmail ?? '',
+                    event: {
+                        title: summary.eventName,
+                        startDatetime: summary.eventStartDatetime,
+                        endDatetime: summary.eventEndDatetime,
+                        venue: { name: summary.venueName, city: summary.venueCity } as VenueResponse,
+                        auditoriumName: summary.auditoriumName,
+                        images: summary.eventImages ?? [],
+                    },
+                };
+
+                setPageData(syntheticState);
+                setLoadingPageData(false);
+            } catch {
+                setPageDataError('Failed to load purchase details. Please check your email for confirmation.');
+                setLoadingPageData(false);
+            }
+        }
+
+        fetchSummary();
+        return () => clearTimeout(timeoutId);
+    }, [purchaseIdFromUrl, routerState]);
+
+    // Load individual tickets once we have page data
+    useEffect(() => {
+        if (!pageData) return;
+        getTicketsByPurchase(pageData.reservation.purchaseId)
             .then(setTickets)
             .catch((err) => setTicketsError(err.message))
             .finally(() => setLoadingTickets(false));
-    }, [reservation.purchaseId]);
+    }, [pageData]);
+
+    if (!purchaseIdFromUrl && !routerState) {
+        navigate('/', { replace: true });
+        return null;
+    }
+
+    if (loadingPageData) {
+        return (
+            <Box>
+                <Header />
+                <Container maxWidth='sm' sx={{ py: 6 }}>
+                    <Stack spacing={2} sx={{ alignItems: 'center' }}>
+                        <CircularProgress />
+                        <Typography color='text.secondary'>Confirming your payment…</Typography>
+                    </Stack>
+                </Container>
+                <Footer />
+            </Box>
+        );
+    }
+
+    if (pageDataError) {
+        return (
+            <Box>
+                <Header />
+                <Container maxWidth='sm' sx={{ py: 6 }}>
+                    <Alert severity='error'>{pageDataError}</Alert>
+                    <Button variant='outlined' sx={{ mt: 2 }} startIcon={<HomeIcon />} onClick={() => navigate('/')}>
+                        Back to Events
+                    </Button>
+                </Container>
+                <Footer />
+            </Box>
+        );
+    }
+
+    if (!pageData) return null;
+
+    const { reservation, buyerName, buyerEmail, event } = pageData;
 
     return (
         <Box>
