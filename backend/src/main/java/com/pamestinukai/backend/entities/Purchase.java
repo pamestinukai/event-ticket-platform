@@ -26,6 +26,7 @@ public class Purchase {
     private String stripeSessionId;
 
     @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "varchar(255)")
     private PurchaseStatus status;
 
     private LocalDateTime createdAt;

@@ -32,6 +32,7 @@ public class Ticket {
     private String qrToken;
 
     @Enumerated(EnumType.STRING)
+    @Column(columnDefinition = "varchar(255)")
     private TicketStatus status;
 
     private LocalDateTime issuedAt;
