@@ -1,18 +1,20 @@
-import { Box, Button, Paper, Stack, Typography } from "@mui/material";
+import { Box, Button, Chip, Paper, Stack, Typography } from "@mui/material";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import LocalOfferIcon from "@mui/icons-material/LocalOffer";
 import EditIcon from "@mui/icons-material/Edit";
 import type { EventResponse } from "../../types/EventResponse";
+import { formatStatus, statusChipColor } from "../../utils/eventStatus";
 
 interface EventCardProps {
   event: EventResponse;
   onEdit?: (event: EventResponse) => void;
   onViewAnalytics?: (event: EventResponse) => void;
   analyticsDisabled?: boolean;
+  showStatus?: boolean;
 }
 
-export function EventCard({ event, onEdit, onViewAnalytics, analyticsDisabled = false }: EventCardProps) {
+export function EventCard({ event, onEdit, onViewAnalytics, analyticsDisabled = false, showStatus = false }: EventCardProps) {
   const thumbnail = event.images?.[0];
   return (
     <Paper elevation={0} sx={{ display: "flex", height: 140, border: "1px solid", borderColor: "divider", borderRadius: 1, overflow: "hidden" }}>
@@ -25,7 +27,19 @@ export function EventCard({ event, onEdit, onViewAnalytics, analyticsDisabled = 
       </Box>
       <Box sx={{ p: 2, flex: 1, display: "flex", flexDirection: "column" }}>
         <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "flex-start", mb: 1 }}>
-          <Typography variant="h6" sx={{ fontWeight: 700 }}>{event.title}</Typography>
+          <Stack direction="row" spacing={1} sx={{ alignItems: "center", minWidth: 0 }}>
+            <Typography variant="h6" sx={{ fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {event.title}
+            </Typography>
+            {showStatus && event.status && (
+              <Chip
+                label={formatStatus(event.status)}
+                color={statusChipColor(event.status)}
+                size="small"
+                sx={{ flexShrink: 0, fontWeight: 600 }}
+              />
+            )}
+          </Stack>
           <Stack direction="row" sx={{ alignItems: "center", gap: 1, flexShrink: 0, ml: 1 }}>
             {event.startingTicketPrice != null && (
               <Typography variant="body2" sx={{ fontWeight: 600, color: "primary.main", whiteSpace: "nowrap" }}>

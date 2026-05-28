@@ -2,9 +2,12 @@ import { useEffect, useState } from "react";
 import { Alert, Box, Button, CircularProgress, Container, Paper, Stack, Typography } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import QrCodeScannerIcon from "@mui/icons-material/QrCodeScanner";
+import GroupIcon from "@mui/icons-material/Group";
+import HomeIcon from "@mui/icons-material/Home";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { getMyEvents } from "../../api/events";
+import { getMyOrganization } from "../../api/organizations";
 import type { EventResponse } from "../../types/EventResponse";
 import { EventCard } from "../../components/EventCard/EventCard";
 import { QrScannerDialog } from "../../components/QrScannerDialog/QrScannerDialog";
@@ -15,6 +18,7 @@ export function Dashboard() {
   const [events, setEvents] = useState<EventResponse[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -22,6 +26,13 @@ export function Dashboard() {
       .then(setEvents)
       .catch((err) => setError(err.message));
   }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    getMyOrganization(token)
+      .then((org) => setIsOwner(org.ownerEmail === email))
+      .catch(() => setIsOwner(false));
+  }, [token, email]);
 
   function handleLogout() {
     logout();
@@ -37,6 +48,24 @@ export function Dashboard() {
             <Typography variant="body2" color="text.secondary">Logged in as <strong>{email}</strong></Typography>
           </Box>
           <Stack direction="row" spacing={1}>
+            <Button
+              variant="outlined"
+              startIcon={<HomeIcon />}
+              onClick={() => navigate("/")}
+              sx={{ textTransform: "none" }}
+            >
+              Home
+            </Button>
+            {isOwner && (
+              <Button
+                variant="outlined"
+                startIcon={<GroupIcon />}
+                onClick={() => navigate("/employees")}
+                sx={{ textTransform: "none" }}
+              >
+                Manage employees
+              </Button>
+            )}
             <Button
               variant="outlined"
               startIcon={<QrCodeScannerIcon />}
@@ -87,6 +116,7 @@ export function Dashboard() {
                 <EventCard
                   key={eventId}
                   event={e}
+                  showStatus
                   onEdit={() => navigate(`/events/${eventId}/edit`)}
                   onViewAnalytics={() => navigate(`/events/${eventId}/analytics`)}
                   analyticsDisabled={!isPastEvent}

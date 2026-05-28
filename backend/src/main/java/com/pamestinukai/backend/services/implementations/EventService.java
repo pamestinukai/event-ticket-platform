@@ -25,6 +25,7 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -48,6 +49,25 @@ public class EventService implements IEventService {
             Ticket.TicketStatus.VALID,
             Ticket.TicketStatus.CHECKED_IN
         );
+
+    // Statuses an organizer may assign when creating a new event.
+    private static final Set<Event.EventStatus> CREATABLE_STATUSES = Set.of(
+            Event.EventStatus.DRAFT,
+            Event.EventStatus.PUBLISHED
+    );
+
+    // Organizer-driven status changes allowed from a given saved status. Every status maps to
+    // itself (editing other fields without touching status). DRAFT can be published, PUBLISHED can
+    // be canceled, and CANCELED/RESCHEDULED/SOLD_OUT/COMPLETED are final from the organizer's side
+    // (system transitions via the scheduler / ticket inventory still apply separately).
+    private static final Map<Event.EventStatus, Set<Event.EventStatus>> ALLOWED_STATUS_TRANSITIONS = Map.of(
+            Event.EventStatus.DRAFT, Set.of(Event.EventStatus.DRAFT, Event.EventStatus.PUBLISHED),
+            Event.EventStatus.PUBLISHED, Set.of(Event.EventStatus.PUBLISHED, Event.EventStatus.CANCELED),
+            Event.EventStatus.CANCELED, Set.of(Event.EventStatus.CANCELED),
+            Event.EventStatus.RESCHEDULED, Set.of(Event.EventStatus.RESCHEDULED),
+            Event.EventStatus.SOLD_OUT, Set.of(Event.EventStatus.SOLD_OUT),
+            Event.EventStatus.COMPLETED, Set.of(Event.EventStatus.COMPLETED)
+    );
 
     private final EventRepository eventRepository;
     private final OrganizationRepository organizationRepository;
@@ -136,6 +156,9 @@ public class EventService implements IEventService {
 
     public Event createEvent(EventRequestDTO dto) {
         validateEventTime(dto);
+        if (!CREATABLE_STATUSES.contains(dto.getStatus())) {
+            throw new EventStatusException("A new event can only be created as DRAFT or PUBLISHED");
+        }
         Event event = mapToEntity(new Event(), dto);
         event.setCreatedAt(LocalDateTime.now());
         event.setUpdatedAt(LocalDateTime.now());
@@ -148,6 +171,7 @@ public class EventService implements IEventService {
         validateEventTime(dto);
         Event event = getEvent(id);
         Event.EventStatus oldStatus = event.getStatus();
+        validateStatusTransition(oldStatus, dto.getStatus());
         LocalDateTime oldStartDatetime = event.getStartDatetime();
 
         mapToEntity(event, dto);
@@ -312,6 +336,14 @@ public class EventService implements IEventService {
     private void validateEventTime(EventRequestDTO dto) {
         if (dto.getStartDatetime().isAfter(dto.getEndDatetime())) {
             throw new IllegalArgumentException("Start datetime must be before end datetime");
+        }
+    }
+
+    private void validateStatusTransition(Event.EventStatus from, Event.EventStatus to) {
+        Set<Event.EventStatus> allowed = ALLOWED_STATUS_TRANSITIONS.getOrDefault(from, Set.of(from));
+        if (!allowed.contains(to)) {
+            throw new EventStatusException(
+                    "Cannot change event status from %s to %s".formatted(from, to));
         }
     }
 }

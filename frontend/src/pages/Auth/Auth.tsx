@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { Alert, Box, Button, Container, Paper, TextField, Typography } from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { login, register } from "../../api/auth";
 import { useAuth } from "../../context/AuthContext";
 
@@ -63,6 +64,13 @@ export function Auth() {
   return (
     <Box sx={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", bgcolor: "background.default" }}>
       <Container maxWidth="xs">
+        <Button
+          onClick={() => navigate("/")}
+          startIcon={<ArrowBackIcon />}
+          sx={{ mb: 2, textTransform: "none", fontWeight: 600, color: "text.secondary" }}
+        >
+          Back to home
+        </Button>
         <Paper elevation={0} sx={{ borderRadius: 1, p: "40px 44px" }}>
           <Typography variant="h4" sx={{ fontWeight: 800, textAlign: "center", color: "text.primary" }}>
             Pamestinukai

@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../constants';
+import { apiFetch } from './http';
 import type { EventResponse } from '../types/EventResponse.ts';
 import type { EventAnalyticsResponse } from '../types/EventAnalyticsResponse.ts';
 import type { EventRequest } from '../types/EventRequest.ts';
@@ -7,14 +7,14 @@ export async function getEventById(
   id: string,
   token?: string,
 ): Promise<EventResponse> {
-  const url = token
-    ? `${API_BASE_URL}/api/events/${id}`
-    : `${API_BASE_URL}/api/events/public/${id}`;
+  const path = token
+    ? `/api/events/${id}`
+    : `/api/events/public/${id}`;
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
   if (token) headers.Authorization = `Bearer ${token}`;
-  const response = await fetch(url, { method: 'GET', headers });
+  const response = await apiFetch(path, { method: 'GET', headers });
   if (!response.ok) {
     switch (response.status) {
       case 401:
@@ -42,7 +42,7 @@ export async function searchPublicEvents(
 ): Promise<EventResponse[]> {
   const { keyword = '', categoryId, dateFrom, dateTo } = params;
   const q = keyword.trim();
-  const base = `${API_BASE_URL}/api/events/public/search`;
+  const base = `/api/events/public/search`;
 
   const baseQs = new URLSearchParams({
     size: '100',
@@ -55,7 +55,7 @@ export async function searchPublicEvents(
   if (dateTo) baseQs.set('dateTo', `${dateTo}T23:59:59`);
 
   if (!q) {
-    const res = await fetch(`${base}?${baseQs}`);
+    const res = await apiFetch(`${base}?${baseQs}`);
     if (!res.ok) throw new Error('Failed to load events');
     return (await res.json()).content;
   }
@@ -67,8 +67,8 @@ export async function searchPublicEvents(
   perfQs.set('performer', q);
 
   const [kwRes, perfRes] = await Promise.all([
-    fetch(`${base}?${kwQs}`),
-    fetch(`${base}?${perfQs}`),
+    apiFetch(`${base}?${kwQs}`),
+    apiFetch(`${base}?${perfQs}`),
   ]);
   if (!kwRes.ok || !perfRes.ok)
     throw new Error('Failed to search events');
@@ -89,8 +89,8 @@ export async function searchPublicEvents(
 export async function getMyEvents(
   token: string,
 ): Promise<EventResponse[]> {
-  const res = await fetch(
-    `${API_BASE_URL}/api/events/mine?sortBy=startDatetime&sortDir=desc&size=100`,
+  const res = await apiFetch(
+    `/api/events/mine?sortBy=startDatetime&sortDir=desc&size=100`,
     {
       headers: { Authorization: `Bearer ${token}` },
     },
@@ -107,7 +107,7 @@ export async function createEvent(
   payload: EventRequest,
   token: string,
 ): Promise<EventResponse> {
-  const res = await fetch(`${API_BASE_URL}/api/events`, {
+  const res = await apiFetch(`/api/events`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -127,7 +127,7 @@ export async function updateEvent(
   payload: EventRequest,
   token: string,
 ): Promise<EventResponse> {
-  const res = await fetch(`${API_BASE_URL}/api/events/${id}`, {
+  const res = await apiFetch(`/api/events/${id}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
@@ -146,7 +146,7 @@ export async function getEventAnalytics(
   id: string,
   token: string,
 ): Promise<EventAnalyticsResponse> {
-  const res = await fetch(`${API_BASE_URL}/api/events/${id}/analytics`, {
+  const res = await apiFetch(`/api/events/${id}/analytics`, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',

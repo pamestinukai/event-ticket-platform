@@ -1,7 +1,7 @@
 import type {OrganizationResponse} from "./OrganizationResponse.ts";
 import type {VenueResponse} from "./VenueResponse.ts";
 
-export type EventType = "DRAFT" | "PUBLISHED" | "CANCELED" | "RESCHEDULED" | "COMPLETED";
+export type EventType = "DRAFT" | "PUBLISHED" | "CANCELED" | "RESCHEDULED" | "SOLD_OUT" | "COMPLETED";
 
 export interface EventResponse {
     eventId : bigint;

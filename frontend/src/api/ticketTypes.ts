@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../constants';
+import { apiFetch } from './http';
 import type { TicketTypeResponse } from '../types/TicketType';
 
 export async function getTicketTypes(
@@ -7,7 +7,7 @@ export async function getTicketTypes(
 ): Promise<TicketTypeResponse[]> {
     const headers: Record<string, string> = {};
     if (token) headers.Authorization = `Bearer ${token}`;
-    const res = await fetch(`${API_BASE_URL}/api/events/${eventId}/ticket-types`, {
+    const res = await apiFetch(`/api/events/${eventId}/ticket-types`, {
         headers,
     });
     if (!res.ok) {

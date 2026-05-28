@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import {
-  Alert, Box, Button, FormControl, IconButton, InputLabel, MenuItem, Paper, Select,
+  Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
+  FormControl, IconButton, InputLabel, MenuItem, Paper, Select,
   Stack, TextField, Tooltip, Typography,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
@@ -20,6 +21,7 @@ import type { AuditoriumResponse } from "../../types/AuditoriumResponse";
 import type { EventRequest } from "../../types/EventRequest";
 import type { EventResponse, EventType } from "../../types/EventResponse";
 import type { TicketTypeRequest } from "../../types/TicketType";
+import { formatStatus } from "../../utils/eventStatus";
 
 interface TicketTypeRow {
   name: string;
@@ -29,7 +31,21 @@ interface TicketTypeRow {
 
 const EMPTY_TICKET_TYPE: TicketTypeRow = { name: "", price: "", totalQuantity: "" };
 
-const STATUSES: EventType[] = ["DRAFT", "PUBLISHED", "CANCELED", "RESCHEDULED", "COMPLETED"];
+// Status options available from the event's currently saved status.
+// DRAFT can be published, PUBLISHED can be canceled, anything else is final.
+function allowedStatuses(saved: EventType): EventType[] {
+  switch (saved) {
+    case "DRAFT":
+      return ["DRAFT", "PUBLISHED"];
+    case "PUBLISHED":
+      return ["PUBLISHED", "CANCELED"];
+    default:
+      return [saved];
+  }
+}
+
+// Transitions that require an "are you sure?" confirmation before applying.
+const CONFIRMED_STATUSES: EventType[] = ["PUBLISHED", "CANCELED"];
 
 function toLocalDatetime(iso: string | undefined): string {
   if (!iso) return "";
@@ -64,6 +80,7 @@ export function EventForm({ initial, submitLabel, onSubmit }: EventFormProps) {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<EventType | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -109,6 +126,19 @@ export function EventForm({ initial, submitLabel, onSubmit }: EventFormProps) {
 
   const filteredAuditoriums = venueId === "" ? [] : auditoriums.filter((a) => a.venueId === venueId);
 
+  const savedStatus: EventType = initial?.status ?? "DRAFT";
+  const statusOptions = allowedStatuses(savedStatus);
+  const statusLocked = statusOptions.length === 1;
+
+  function handleStatusChange(next: EventType) {
+    if (next === status) return;
+    if (CONFIRMED_STATUSES.includes(next)) {
+      setPendingStatus(next);
+    } else {
+      setStatus(next);
+    }
+  }
+
   async function handleSubmit(e: { preventDefault(): void }) {
     e.preventDefault();
     const next: Record<string, string> = {};
@@ -121,6 +151,7 @@ export function EventForm({ initial, submitLabel, onSubmit }: EventFormProps) {
       next.endDatetime = "End must be after start";
     }
     if (organizationId === null) next.form = "Could not load your organization";
+    if (ticketTypes.length === 0) next.ticketTypes = "Add at least one ticket type";
     ticketTypes.forEach((t, i) => {
       if (!t.name.trim()) next[`tt-name-${i}`] = "Name is required";
       if (t.price === "" || Number.isNaN(Number(t.price)) || Number(t.price) < 0) next[`tt-price-${i}`] = "Price must be ≥ 0";
@@ -250,13 +281,22 @@ export function EventForm({ initial, submitLabel, onSubmit }: EventFormProps) {
             />
           </Stack>
 
-          <FormControl fullWidth>
+          <FormControl fullWidth disabled={statusLocked}>
             <InputLabel>Status</InputLabel>
-            <Select label="Status" value={status} onChange={(e) => setStatus(e.target.value as EventType)}>
-              {STATUSES.map((s) => (
-                <MenuItem key={s} value={s}>{s}</MenuItem>
+            <Select
+              label="Status"
+              value={status}
+              onChange={(e) => handleStatusChange(e.target.value as EventType)}
+            >
+              {statusOptions.map((s) => (
+                <MenuItem key={s} value={s}>{formatStatus(s)}</MenuItem>
               ))}
             </Select>
+            {statusLocked && (
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 1.5 }}>
+                {formatStatus(savedStatus)} events can no longer change status.
+              </Typography>
+            )}
           </FormControl>
 
           <Box>
@@ -272,8 +312,8 @@ export function EventForm({ initial, submitLabel, onSubmit }: EventFormProps) {
               </Button>
             </Stack>
             {ticketTypes.length === 0 ? (
-              <Typography variant="caption" color="text.secondary">
-                No ticket types yet. Add one so people can buy tickets.
+              <Typography variant="caption" color={errors.ticketTypes ? "error" : "text.secondary"}>
+                {errors.ticketTypes ?? "No ticket types yet. Add one so people can buy tickets."}
               </Typography>
             ) : (
               <Stack spacing={1.5}>
@@ -470,6 +510,36 @@ export function EventForm({ initial, submitLabel, onSubmit }: EventFormProps) {
           </Button>
         </Stack>
       </Box>
+
+      <Dialog open={pendingStatus !== null} onClose={() => setPendingStatus(null)}>
+        <DialogTitle>
+          {pendingStatus === "CANCELED" ? "Cancel this event?" : "Publish this event?"}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {pendingStatus === "CANCELED"
+              ? "Canceling this event is permanent and can't be undone. Are you sure you want to continue?"
+              : "Publishing makes this event visible to the public and available for ticket purchases. Are you sure?"}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPendingStatus(null)} sx={{ textTransform: "none" }}>
+            Go back
+          </Button>
+          <Button
+            variant="contained"
+            disableElevation
+            color={pendingStatus === "CANCELED" ? "error" : "primary"}
+            onClick={() => {
+              if (pendingStatus) setStatus(pendingStatus);
+              setPendingStatus(null);
+            }}
+            sx={{ textTransform: "none", fontWeight: 700 }}
+          >
+            {pendingStatus === "CANCELED" ? "Cancel event" : "Publish"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Paper>
   );
 }

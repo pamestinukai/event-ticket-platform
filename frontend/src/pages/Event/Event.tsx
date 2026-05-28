@@ -13,7 +13,7 @@ import {
 import { useParams } from 'react-router-dom';
 import { getEventById } from '../../api/events.ts';
 import { useEffect, useState } from 'react';
-import { EventThumbnail } from '../../components/EventThumbnail/EventThumbnail.tsx';
+import { EventGallery } from '../../components/EventGallery/EventGallery.tsx';
 import { Footer } from '../../components/Footer/Footer.tsx';
 import { Header } from '../../components/Header/Header.tsx';
 import { TicketPurchaseDrawer } from '../../components/TicketPurchaseDrawer/TicketPurchaseDrawer.tsx';
@@ -83,7 +83,7 @@ export function EventPage() {
         <Box>
             <Header />
             <Container maxWidth='lg'>
-                <EventThumbnail src={event.images[0]} />
+                <EventGallery images={event.images} />
                 <Grid container spacing={3}>
                     <Grid size={9} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                         <Paper
