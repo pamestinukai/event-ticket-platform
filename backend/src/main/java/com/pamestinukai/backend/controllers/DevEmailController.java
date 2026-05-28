@@ -1,6 +1,8 @@
 package com.pamestinukai.backend.controllers;
 
 import com.pamestinukai.backend.services.email.EmailMessage;
+import com.pamestinukai.backend.services.implementations.TicketPdfService;
+import com.pamestinukai.backend.services.implementations.TicketQrCodeService;
 import com.pamestinukai.backend.services.interfaces.IEmailService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -18,15 +20,36 @@ import java.util.UUID;
 public class DevEmailController {
 
     private final IEmailService emailService;
-    // Step 1 — inject the ticket PDF generator here once it exists, e.g.:
-    //   private final ITicketPdfGenerator ticketPdfGenerator;
+    private final TicketQrCodeService ticketQrCodeService;
+    private final TicketPdfService ticketPdfService;
 
     @PostMapping("/test")
     public String sendTest(@RequestParam String to) {
         String ticketId = UUID.randomUUID().toString();
 
-        // Step 2 — call the generator to get the PDF bytes, e.g.:
-        //   byte[] pdfBytes = ticketPdfGenerator.generate(ticketId, /* event/holder data */);
+        byte[] qrPng = ticketQrCodeService.generatePng(ticketId);
+
+        // Build a minimal in-memory ticket model for dev-only preview emails.
+        com.pamestinukai.backend.entities.Ticket ticket = new com.pamestinukai.backend.entities.Ticket();
+        com.pamestinukai.backend.entities.Purchase purchase = new com.pamestinukai.backend.entities.Purchase();
+        com.pamestinukai.backend.entities.Event event = new com.pamestinukai.backend.entities.Event();
+        com.pamestinukai.backend.entities.Venue venue = new com.pamestinukai.backend.entities.Venue();
+        com.pamestinukai.backend.entities.TicketType ticketType = new com.pamestinukai.backend.entities.TicketType();
+
+        purchase.setBuyerName("Tester");
+        ticket.setPurchase(purchase);
+        ticket.setQrToken(ticketId);
+        ticket.setTicketType(ticketType);
+
+        event.setTitle("Sample Event");
+        event.setStartDatetime(java.time.LocalDateTime.of(2026, 6, 1, 19, 0));
+        venue.setName("Sample Venue");
+        venue.setCity("Vilnius");
+        event.setVenue(venue);
+        ticketType.setName("General Admission");
+        ticketType.setEvent(event);
+
+        byte[] pdfBytes = ticketPdfService.generateTicketPdf(ticket, qrPng);
 
         emailService.send(EmailMessage.builder()
                 .to(to)
@@ -38,8 +61,7 @@ public class DevEmailController {
                 .variable("venue", "Sample Venue, Vilnius")
                 .variable("ticketType", "General Admission")
                 .variable("ticketId", ticketId)
-                // Step 3 — chain the attachment onto the builder:
-                //   .attachment(EmailAttachment.pdf("ticket-" + ticketId + ".pdf", pdfBytes))
+                .attachment(com.pamestinukai.backend.services.email.EmailAttachment.pdf("ticket-" + ticketId + ".pdf", pdfBytes))
                 .build());
 
         return "sent to " + to + " (ticket " + ticketId + ")";

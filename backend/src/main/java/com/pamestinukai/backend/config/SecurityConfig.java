@@ -28,6 +28,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/events/public/**").permitAll()
+                        .requestMatchers("/api/events/*/ticket-types").permitAll()
                         .requestMatchers("/api/categories").permitAll()
                         .requestMatchers("/api/dev/**").permitAll()
                         .requestMatchers("/api/tickets/**").permitAll()

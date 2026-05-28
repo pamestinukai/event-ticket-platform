@@ -9,10 +9,13 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface TicketRepository extends JpaRepository<Ticket, Long> {
     List<Ticket> findAllByPurchase(Purchase purchase);
+    Optional<Ticket> findFirstByQrToken(String qrToken);
+    long countByQrToken(String qrToken);
 
     @Query("""
         SELECT count(t)
