@@ -1,8 +1,10 @@
 package com.pamestinukai.backend.schedulers;
 
 import com.pamestinukai.backend.entities.Notification;
+import com.pamestinukai.backend.entities.Purchase;
 import com.pamestinukai.backend.entities.Ticket;
 import com.pamestinukai.backend.repositories.NotificationRepository;
+import com.pamestinukai.backend.repositories.TicketRepository;
 import com.pamestinukai.backend.services.implementations.TicketPdfService;
 import com.pamestinukai.backend.services.implementations.TicketQrCodeService;
 import com.pamestinukai.backend.services.email.EmailAttachment;
@@ -25,6 +27,7 @@ import java.util.List;
 public class EmailRetryScheduler {
 
     private final NotificationRepository notificationRepository;
+    private final TicketRepository ticketRepository;
     private final IEmailService emailService;
     private final TicketQrCodeService ticketQrCodeService;
     private final TicketPdfService ticketPdfService;
@@ -52,8 +55,18 @@ public class EmailRetryScheduler {
             }
 
             Ticket ticket = notification.getTicket();
-            if (ticket == null) {
-                notification.setLastError("Notification does not have linked ticket");
+            Purchase purchase = notification.getPurchase();
+            if (purchase == null) {
+                notification.setLastError("Notification does not have linked purchase");
+                notification.setAttemptCount(nextAttempt(notification));
+                notification.setScheduledAt(LocalDateTime.now().plusMinutes(retryDelayMinutes));
+                notificationRepository.save(notification);
+                continue;
+            }
+
+            List<Ticket> tickets = ticketRepository.findAllByPurchase(purchase);
+            if (tickets.isEmpty()) {
+                notification.setLastError("No tickets found for purchase " + purchase.getPurchaseId());
                 notification.setAttemptCount(nextAttempt(notification));
                 notification.setScheduledAt(LocalDateTime.now().plusMinutes(retryDelayMinutes));
                 notificationRepository.save(notification);
@@ -61,32 +74,37 @@ public class EmailRetryScheduler {
             }
 
             try {
-                String recipient = ticket.getPurchase().getBuyerEmail();
+                String recipient = purchase.getBuyerEmail();
                 if (recipient == null || recipient.isBlank()) {
-                    throw new IllegalStateException("Buyer email is missing for purchase " + ticket.getPurchase().getPurchaseId());
+                    throw new IllegalStateException("Buyer email is missing for purchase " + purchase.getPurchaseId());
                 }
 
-                byte[] qrCodePng = ticketQrCodeService.generatePng(ticket.getQrToken());
-                byte[] ticketPdf = ticketPdfService.generateTicketPdf(ticket, qrCodePng);
+                Ticket firstTicket = tickets.getFirst();
 
-                emailService.send(EmailMessage.builder()
+                EmailMessage.EmailMessageBuilder messageBuilder = EmailMessage.builder()
                         .to(recipient)
-                        .subject("Your ticket for " + ticket.getTicketType().getEvent().getTitle())
+                        .subject("Your tickets for " + firstTicket.getTicketType().getEvent().getTitle())
                         .templateName("ticket")
-                        .variable("recipientName", defaultValue(ticket.getPurchase().getBuyerName(), "there"))
-                        .variable("eventTitle", defaultValue(ticket.getTicketType().getEvent().getTitle(), "Event"))
-                        .variable("eventDate", formatEventDate(ticket))
-                        .variable("venue", formatVenue(ticket))
-                        .variable("ticketType", defaultValue(ticket.getTicketType().getName(), "General"))
-                        .variable("ticketId", ticket.getQrToken())
-                        .attachment(EmailAttachment.pdf("ticket-" + ticket.getTicketId() + ".pdf", ticketPdf))
-                        .build());
+                        .variable("recipientName", defaultValue(purchase.getBuyerName(), "there"))
+                        .variable("eventTitle", defaultValue(firstTicket.getTicketType().getEvent().getTitle(), "Event"))
+                        .variable("eventDate", formatEventDate(firstTicket))
+                        .variable("venue", formatVenue(firstTicket))
+                        .variable("ticketType", tickets.size() > 1 ? "Multiple ticket types" : defaultValue(firstTicket.getTicketType().getName(), "General"))
+                        .variable("ticketId", tickets.size() > 1 ? "Included in attached PDFs" : firstTicket.getQrToken());
+
+                for (Ticket purchaseTicket : tickets) {
+                    byte[] qrCodePng = ticketQrCodeService.generatePng(purchaseTicket.getQrToken());
+                    byte[] ticketPdf = ticketPdfService.generateTicketPdf(purchaseTicket, qrCodePng);
+                    messageBuilder.attachment(EmailAttachment.pdf("ticket-" + purchaseTicket.getTicketId() + ".pdf", ticketPdf));
+                }
+
+                emailService.send(messageBuilder.build());
 
                 notification.setStatus(Notification.NotificationStatus.SENT);
                 notification.setSentAt(LocalDateTime.now());
                 notification.setLastError(null);
                 notificationRepository.save(notification);
-                log.info("Retried and sent confirmation email for ticket {}", ticket.getTicketId());
+                log.info("Retried and sent confirmation email for purchase {}", purchase.getPurchaseId());
             } catch (Exception ex) {
                 notification.setStatus(Notification.NotificationStatus.FAILED);
                 notification.setAttemptCount(nextAttempt(notification));
