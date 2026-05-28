@@ -67,11 +67,16 @@ export function Dashboard() {
           <Stack spacing={2}>
             {events.map((e) => {
               const eventId = (e as unknown as { eventId: number }).eventId;
+              const isPastEvent =
+                e.status === "COMPLETED" ||
+                new Date(e.endDatetime).getTime() < Date.now();
               return (
                 <EventCard
                   key={eventId}
                   event={e}
                   onEdit={() => navigate(`/events/${eventId}/edit`)}
+                  onViewAnalytics={() => navigate(`/events/${eventId}/analytics`)}
+                  analyticsDisabled={!isPastEvent}
                 />
               );
             })}

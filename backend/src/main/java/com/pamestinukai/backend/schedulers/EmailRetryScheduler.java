@@ -5,10 +5,10 @@ import com.pamestinukai.backend.entities.Purchase;
 import com.pamestinukai.backend.entities.Ticket;
 import com.pamestinukai.backend.repositories.NotificationRepository;
 import com.pamestinukai.backend.repositories.TicketRepository;
-import com.pamestinukai.backend.services.implementations.TicketPdfService;
-import com.pamestinukai.backend.services.implementations.TicketQrCodeService;
 import com.pamestinukai.backend.services.email.EmailAttachment;
 import com.pamestinukai.backend.services.email.EmailMessage;
+import com.pamestinukai.backend.services.implementations.TicketPdfService;
+import com.pamestinukai.backend.services.implementations.TicketQrCodeService;
 import com.pamestinukai.backend.services.interfaces.IEmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -54,7 +54,6 @@ public class EmailRetryScheduler {
                 continue;
             }
 
-            Ticket ticket = notification.getTicket();
             Purchase purchase = notification.getPurchase();
             if (purchase == null) {
                 notification.setLastError("Notification does not have linked purchase");
@@ -79,7 +78,7 @@ public class EmailRetryScheduler {
                     throw new IllegalStateException("Buyer email is missing for purchase " + purchase.getPurchaseId());
                 }
 
-                Ticket firstTicket = tickets.getFirst();
+                Ticket firstTicket = tickets.get(0);
 
                 EmailMessage.EmailMessageBuilder messageBuilder = EmailMessage.builder()
                         .to(recipient)

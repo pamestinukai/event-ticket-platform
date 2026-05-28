@@ -1,5 +1,6 @@
 import { API_BASE_URL } from '../constants';
 import type { EventResponse } from '../types/EventResponse.ts';
+import type { EventAnalyticsResponse } from '../types/EventAnalyticsResponse.ts';
 import type { EventRequest } from '../types/EventRequest.ts';
 
 export async function getEventById(
@@ -139,4 +140,30 @@ export async function updateEvent(
     throw new Error(err?.message ?? 'Failed to update event');
   }
   return res.json();
+}
+
+export async function getEventAnalytics(
+  id: string,
+  token: string,
+): Promise<EventAnalyticsResponse> {
+  const res = await fetch(`${API_BASE_URL}/api/events/${id}/analytics`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (!res.ok) {
+    switch (res.status) {
+      case 400:
+        throw new Error('Analytics are available only for past events');
+      case 403:
+        throw new Error('You are not allowed to view analytics for this event');
+      case 404:
+        throw new Error('Event not found');
+      default:
+        throw new Error('Failed to fetch event analytics');
+    }
+  }
+  return await res.json();
 }

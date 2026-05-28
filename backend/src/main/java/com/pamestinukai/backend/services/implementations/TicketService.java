@@ -139,12 +139,12 @@ public class TicketService implements ITicketService {
       purchase.setStatus(Purchase.PurchaseStatus.COMPLETED);
       purchaseRepository.save(purchase);
 
-            Ticket representativeTicket = tickets.stream().findFirst()
-               .orElseThrow(() -> new InvalidTicketStatusException("No tickets found for purchase"));
+      Ticket representativeTicket = tickets.stream().findFirst()
+           .orElseThrow(() -> new InvalidTicketStatusException("No tickets found for purchase"));
 
-            Notification notification = createConfirmationNotification(representativeTicket);
-            notificationRepository.save(notification);
-            sendPurchaseEmailWithRetryState(purchase, tickets, notification);
+      Notification notification = createConfirmationNotification(representativeTicket);
+      notificationRepository.save(notification);
+      sendPurchaseEmailWithRetryState(purchase, tickets, notification);
 
       log.info("Tickets confirmed for purchase id: {}", purchaseId);
    }

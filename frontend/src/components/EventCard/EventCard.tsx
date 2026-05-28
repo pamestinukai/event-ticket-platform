@@ -8,9 +8,11 @@ import type { EventResponse } from "../../types/EventResponse";
 interface EventCardProps {
   event: EventResponse;
   onEdit?: (event: EventResponse) => void;
+  onViewAnalytics?: (event: EventResponse) => void;
+  analyticsDisabled?: boolean;
 }
 
-export function EventCard({ event, onEdit }: EventCardProps) {
+export function EventCard({ event, onEdit, onViewAnalytics, analyticsDisabled = false }: EventCardProps) {
   const thumbnail = event.images?.[0];
   return (
     <Paper elevation={0} sx={{ display: "flex", height: 140, border: "1px solid", borderColor: "divider", borderRadius: 1, overflow: "hidden" }}>
@@ -33,6 +35,17 @@ export function EventCard({ event, onEdit }: EventCardProps) {
             {onEdit && (
               <Button size="small" startIcon={<EditIcon />} onClick={() => onEdit(event)} sx={{ textTransform: "none" }}>
                 Edit
+              </Button>
+            )}
+            {onViewAnalytics && (
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => onViewAnalytics(event)}
+                disabled={analyticsDisabled}
+                sx={{ textTransform: "none" }}
+              >
+                Analytics
               </Button>
             )}
           </Stack>
