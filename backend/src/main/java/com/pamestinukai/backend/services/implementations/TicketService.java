@@ -139,11 +139,12 @@ public class TicketService implements ITicketService {
       purchase.setStatus(Purchase.PurchaseStatus.COMPLETED);
       purchaseRepository.save(purchase);
 
-      for (Ticket ticket : tickets) {
-         Notification notification = createConfirmationNotification(ticket);
-         notificationRepository.save(notification);
-         sendTicketEmailWithRetryState(ticket, notification);
-      }
+      Ticket representativeTicket = tickets.stream().findFirst()
+           .orElseThrow(() -> new InvalidTicketStatusException("No tickets found for purchase"));
+
+      Notification notification = createConfirmationNotification(representativeTicket);
+      notificationRepository.save(notification);
+      sendPurchaseEmailWithRetryState(purchase, tickets, notification);
 
       log.info("Tickets confirmed for purchase id: {}", purchaseId);
    }
@@ -222,7 +223,6 @@ public class TicketService implements ITicketService {
             ticket.setPurchase(purchase);
             ticket.setQrToken(generateUniqueQrToken());
             ticket.setIssuedAt(LocalDateTime.now());
-            ticket.setQrToken(java.util.UUID.randomUUID().toString());
             tickets.add(ticket);
          }
       }
@@ -262,28 +262,34 @@ public class TicketService implements ITicketService {
       return notification;
    }
 
-   private void sendTicketEmailWithRetryState(Ticket ticket, Notification notification) {
+   private void sendPurchaseEmailWithRetryState(Purchase purchase, List<Ticket> tickets, Notification notification) {
       try {
-         String recipient = ticket.getPurchase().getBuyerEmail();
+         String recipient = purchase.getBuyerEmail();
          if (recipient == null || recipient.isBlank()) {
-            throw new IllegalStateException("Buyer email is missing for purchase " + ticket.getPurchase().getPurchaseId());
+            throw new IllegalStateException("Buyer email is missing for purchase " + purchase.getPurchaseId());
          }
 
-         byte[] qrCodePng = ticketQrCodeService.generatePng(ticket.getQrToken());
-         byte[] ticketPdf = ticketPdfService.generateTicketPdf(ticket, qrCodePng);
+         Ticket firstTicket = tickets.stream().findFirst()
+                 .orElseThrow(() -> new IllegalStateException("No tickets found for purchase " + purchase.getPurchaseId()));
 
-         emailService.send(EmailMessage.builder()
+         EmailMessage.EmailMessageBuilder messageBuilder = EmailMessage.builder()
                  .to(recipient)
-                 .subject("Your ticket for " + ticket.getTicketType().getEvent().getTitle())
+                 .subject("Your tickets for " + firstTicket.getTicketType().getEvent().getTitle())
                  .templateName("ticket")
-                 .variable("recipientName", defaultValue(ticket.getPurchase().getBuyerName(), "there"))
-                 .variable("eventTitle", defaultValue(ticket.getTicketType().getEvent().getTitle(), "Event"))
-                 .variable("eventDate", formatEventDate(ticket.getTicketType().getEvent()))
-                 .variable("venue", formatVenue(ticket.getTicketType().getEvent()))
-                 .variable("ticketType", defaultValue(ticket.getTicketType().getName(), "General"))
-                 .variable("ticketId", ticket.getQrToken())
-                 .attachment(EmailAttachment.pdf("ticket-" + ticket.getTicketId() + ".pdf", ticketPdf))
-                 .build());
+                 .variable("recipientName", defaultValue(purchase.getBuyerName(), "there"))
+                 .variable("eventTitle", defaultValue(firstTicket.getTicketType().getEvent().getTitle(), "Event"))
+                 .variable("eventDate", formatEventDate(firstTicket.getTicketType().getEvent()))
+                 .variable("venue", formatVenue(firstTicket.getTicketType().getEvent()))
+                 .variable("ticketType", tickets.size() > 1 ? "Multiple ticket types" : defaultValue(firstTicket.getTicketType().getName(), "General"))
+                 .variable("ticketId", tickets.size() > 1 ? "Included in attached PDFs" : firstTicket.getQrToken());
+
+         for (Ticket ticket : tickets) {
+            byte[] qrCodePng = ticketQrCodeService.generatePng(ticket.getQrToken());
+            byte[] ticketPdf = ticketPdfService.generateTicketPdf(ticket, qrCodePng);
+            messageBuilder.attachment(EmailAttachment.pdf("ticket-" + ticket.getTicketId() + ".pdf", ticketPdf));
+         }
+
+         emailService.send(messageBuilder.build());
 
          notification.setStatus(Notification.NotificationStatus.SENT);
          notification.setSentAt(LocalDateTime.now());
@@ -293,7 +299,7 @@ public class TicketService implements ITicketService {
          notification.setAttemptCount(notification.getAttemptCount() == null ? 1 : notification.getAttemptCount() + 1);
          notification.setLastError(truncateError(ex.getMessage()));
          notification.setScheduledAt(LocalDateTime.now().plusMinutes(emailRetryDelayMinutes));
-         log.error("Failed to send ticket email for ticket {}", ticket.getTicketId(), ex);
+         log.error("Failed to send ticket email for purchase {}", purchase.getPurchaseId(), ex);
       }
 
       notificationRepository.save(notification);
