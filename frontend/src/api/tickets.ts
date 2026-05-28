@@ -27,10 +27,31 @@ export async function cancelReservation(purchaseId: number): Promise<void> {
     if (!res.ok) throw new Error('Failed to cancel reservation');
 }
 
-export async function confirmReservation(purchaseId: number): Promise<void> {
+export async function confirmReservation(
+    purchaseId: number,
+    buyerEmail?: string,
+    buyerName?: string,
+): Promise<void> {
+    const params = new URLSearchParams();
+    if (buyerEmail) params.set('buyerEmail', buyerEmail);
+    if (buyerName) params.set('buyerName', buyerName);
     const res = await fetch(
-        `${API_BASE_URL}/api/tickets/reserve/${purchaseId}/confirm`,
+        `${API_BASE_URL}/api/tickets/reserve/${purchaseId}/confirm?${params}`,
         { method: 'POST' },
     );
     if (!res.ok) throw new Error('Failed to confirm reservation');
+}
+
+export async function downloadTicketPdf(purchaseId: number): Promise<Blob> {
+    const res = await fetch(
+        `${API_BASE_URL}/api/tickets/purchase/${purchaseId}/pdf`,
+    );
+    if (!res.ok) throw new Error('Failed to download ticket PDF');
+    return res.blob();
+}
+
+export async function getTicketsByPurchase(purchaseId: number): Promise<import('../types/TicketResponse').TicketResponse[]> {
+    const res = await fetch(`${API_BASE_URL}/api/tickets/purchase/${purchaseId}`);
+    if (!res.ok) throw new Error('Failed to load tickets');
+    return res.json();
 }

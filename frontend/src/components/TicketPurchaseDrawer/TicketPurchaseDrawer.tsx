@@ -29,7 +29,8 @@ interface TicketPurchaseDrawerProps {
     event: EventResponse;
 }
 
-type Step = 'select' | 'details' | 'confirming';
+// quantity per ticketTypeId
+type QuantityMap = Record<number, number>;
 
 export function TicketPurchaseDrawer({
                                          open,
@@ -39,25 +40,17 @@ export function TicketPurchaseDrawer({
     const navigate = useNavigate();
     const eventId = Number(event.eventId);
 
-    // Ticket types
     const [ticketTypes, setTicketTypes] = useState<TicketTypeResponse[]>([]);
     const [loadingTypes, setLoadingTypes] = useState(false);
     const [typesError, setTypesError] = useState<string | null>(null);
 
-    // Selection
-    const [selectedTypeId, setSelectedTypeId] = useState<number | ''>('');
-    const [quantity, setQuantity] = useState(1);
-
-    // Buyer details
+    const [quantities, setQuantities] = useState<QuantityMap>({});
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
 
-    // Flow
-    const [step, setStep] = useState<Step>('select');
     const [submitting, setSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState<string | null>(null);
 
-    // Load ticket types when drawer opens
     useEffect(() => {
         if (!open) return;
         setLoadingTypes(true);
@@ -65,39 +58,56 @@ export function TicketPurchaseDrawer({
         getTicketTypes(eventId)
             .then((types) => {
                 setTicketTypes(types);
-                if (types.length > 0) setSelectedTypeId(types[0].id);
+                // initialise all quantities to 0
+                const init: QuantityMap = {};
+                types.forEach((t) => { init[t.id] = 0; });
+                setQuantities(init);
             })
             .catch((err) => setTypesError(err.message))
             .finally(() => setLoadingTypes(false));
     }, [open, eventId]);
 
-    // Reset when closed
     useEffect(() => {
         if (!open) {
-            setStep('select');
-            setQuantity(1);
+            setQuantities({});
             setName('');
             setEmail('');
             setSubmitError(null);
-            setSelectedTypeId('');
         }
     }, [open]);
 
-    const selectedType = ticketTypes.find((t) => t.id === selectedTypeId);
-    const totalPrice = selectedType ? selectedType.price * quantity : 0;
-    const maxQty = selectedType ? Math.min(selectedType.availableQuantity, 10) : 1;
+    function setQty(typeId: number, delta: number, max: number) {
+        setQuantities((prev) => {
+            const next = (prev[typeId] ?? 0) + delta;
+            return { ...prev, [typeId]: Math.max(0, Math.min(max, next)) };
+        });
+    }
+
+    const selectedItems = ticketTypes
+        .map((t) => ({ type: t, qty: quantities[t.id] ?? 0 }))
+        .filter((x) => x.qty > 0);
+
+    const totalPrice = selectedItems.reduce(
+        (sum, { type, qty }) => sum + Number(type.price) * qty,
+        0,
+    );
+    const totalTickets = selectedItems.reduce((sum, { qty }) => sum + qty, 0);
+    const canConfirm = totalTickets > 0 && name.trim() !== '' && email.trim() !== '';
 
     async function handleConfirmPurchase() {
-        if (!selectedType || selectedTypeId === '') return;
+        if (!canConfirm) return;
         setSubmitting(true);
         setSubmitError(null);
         let reservation: TicketReservationResponse | null = null;
         try {
             reservation = await reserveTickets({
                 eventId,
-                tickets: [{ ticketTypeId: Number(selectedTypeId), quantity }],
+                tickets: selectedItems.map(({ type, qty }) => ({
+                    ticketTypeId: type.id,
+                    quantity: qty,
+                })),
             });
-            await confirmReservation(reservation.purchaseId);
+            await confirmReservation(reservation.purchaseId, email, name);
             onClose();
             navigate('/ticket/confirmation', {
                 state: {
@@ -194,90 +204,77 @@ export function TicketPurchaseDrawer({
 
                 {!loadingTypes && !typesError && ticketTypes.length > 0 && (
                     <Stack spacing={3}>
-                        {/* Step 1: Ticket selection */}
+                        {/* Ticket types with per-type quantity */}
                         <Box>
                             <Typography variant='body2' sx={{ fontWeight: 700, mb: 1.5, color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: 1 }}>
                                 Available ticket types
                             </Typography>
                             <Stack spacing={1.5}>
-                                {ticketTypes.map((type) => (
-                                    <Paper
-                                        key={type.id}
-                                        elevation={0}
-                                        onClick={() => {
-                                            if (type.availableQuantity > 0) {
-                                                setSelectedTypeId(type.id);
-                                                setQuantity(1);
-                                            }
-                                        }}
-                                        sx={{
-                                            border: '2px solid',
-                                            borderColor: selectedTypeId === type.id ? 'primary.main' : 'divider',
-                                            borderRadius: 2,
-                                            p: 2,
-                                            cursor: type.availableQuantity > 0 ? 'pointer' : 'not-allowed',
-                                            opacity: type.availableQuantity === 0 ? 0.5 : 1,
-                                            transition: 'border-color 0.15s, box-shadow 0.15s',
-                                            boxShadow: selectedTypeId === type.id ? '0 0 0 4px rgba(37,99,235,0.1)' : 'none',
-                                            '&:hover': type.availableQuantity > 0 ? { borderColor: 'primary.main' } : {},
-                                        }}
-                                    >
-                                        <Stack direction='row' sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <Box>
-                                                <Typography variant='body1' sx={{ fontWeight: 600 }}>
-                                                    {type.name}
-                                                </Typography>
-                                                <Typography variant='body2' color='text.secondary'>
-                                                    {type.availableQuantity > 0
-                                                        ? `${type.availableQuantity} left`
-                                                        : 'Sold out'}
-                                                </Typography>
-                                            </Box>
-                                            <Typography variant='h6' sx={{ fontWeight: 700, color: 'primary.main' }}>
-                                                €{Number(type.price).toFixed(2)}
-                                            </Typography>
-                                        </Stack>
-                                    </Paper>
-                                ))}
+                                {ticketTypes.map((type) => {
+                                    const qty = quantities[type.id] ?? 0;
+                                    const maxQty = Math.min(type.availableQuantity, 10);
+                                    const sold = type.availableQuantity === 0;
+                                    return (
+                                        <Paper
+                                            key={type.id}
+                                            elevation={0}
+                                            sx={{
+                                                border: '2px solid',
+                                                borderColor: qty > 0 ? 'primary.main' : 'divider',
+                                                borderRadius: 2,
+                                                p: 2,
+                                                opacity: sold ? 0.5 : 1,
+                                                transition: 'border-color 0.15s',
+                                                boxShadow: qty > 0 ? '0 0 0 4px rgba(37,99,235,0.1)' : 'none',
+                                            }}
+                                        >
+                                            <Stack direction='row' sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <Box>
+                                                    <Typography variant='body1' sx={{ fontWeight: 600 }}>
+                                                        {type.name}
+                                                    </Typography>
+                                                    <Typography variant='body2' color='text.secondary'>
+                                                        {sold ? 'Sold out' : `${type.availableQuantity} left`}
+                                                    </Typography>
+                                                </Box>
+                                                <Stack direction='row' sx={{ alignItems: 'center', gap: 1.5 }}>
+                                                    <Typography variant='body1' sx={{ fontWeight: 700, color: 'primary.main', minWidth: 60, textAlign: 'right' }}>
+                                                        €{Number(type.price).toFixed(2)}
+                                                    </Typography>
+                                                    {!sold && (
+                                                        <Stack direction='row' sx={{ alignItems: 'center', gap: 0.5 }}>
+                                                            <IconButton
+                                                                size='small'
+                                                                onClick={() => setQty(type.id, -1, maxQty)}
+                                                                disabled={qty <= 0}
+                                                                sx={{ border: '1px solid', borderColor: 'divider', width: 28, height: 28 }}
+                                                            >
+                                                                <RemoveIcon sx={{ fontSize: 14 }} />
+                                                            </IconButton>
+                                                            <Typography variant='body1' sx={{ fontWeight: 700, minWidth: 20, textAlign: 'center' }}>
+                                                                {qty}
+                                                            </Typography>
+                                                            <IconButton
+                                                                size='small'
+                                                                onClick={() => setQty(type.id, 1, maxQty)}
+                                                                disabled={qty >= maxQty}
+                                                                sx={{ border: '1px solid', borderColor: 'divider', width: 28, height: 28 }}
+                                                            >
+                                                                <AddIcon sx={{ fontSize: 14 }} />
+                                                            </IconButton>
+                                                        </Stack>
+                                                    )}
+                                                </Stack>
+                                            </Stack>
+                                        </Paper>
+                                    );
+                                })}
                             </Stack>
                         </Box>
 
-                        {/* Quantity selector */}
-                        {selectedType && (
-                            <Box>
-                                <Typography variant='body2' sx={{ fontWeight: 700, mb: 1.5, color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: 1 }}>
-                                    Quantity
-                                </Typography>
-                                <Stack direction='row' sx={{ alignItems: 'center', gap: 1 }}>
-                                    <IconButton
-                                        size='small'
-                                        onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                                        disabled={quantity <= 1}
-                                        sx={{ border: '1px solid', borderColor: 'divider' }}
-                                    >
-                                        <RemoveIcon fontSize='small' />
-                                    </IconButton>
-                                    <Typography variant='h6' sx={{ fontWeight: 700, minWidth: 32, textAlign: 'center' }}>
-                                        {quantity}
-                                    </Typography>
-                                    <IconButton
-                                        size='small'
-                                        onClick={() => setQuantity((q) => Math.min(maxQty, q + 1))}
-                                        disabled={quantity >= maxQty}
-                                        sx={{ border: '1px solid', borderColor: 'divider' }}
-                                    >
-                                        <AddIcon fontSize='small' />
-                                    </IconButton>
-                                    <Typography variant='body2' color='text.secondary' sx={{ ml: 1 }}>
-                                        max {maxQty}
-                                    </Typography>
-                                </Stack>
-                            </Box>
-                        )}
-
                         <Divider />
 
-                        {/* Step 2: Buyer details */}
+                        {/* Buyer details */}
                         <Box>
                             <Typography variant='body2' sx={{ fontWeight: 700, mb: 1.5, color: 'text.secondary', textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: 1 }}>
                                 Your details
@@ -309,8 +306,8 @@ export function TicketPurchaseDrawer({
                 )}
             </Box>
 
-            {/* Footer: total + CTA */}
-            {!loadingTypes && !typesError && selectedType && (
+            {/* Footer */}
+            {!loadingTypes && !typesError && ticketTypes.length > 0 && (
                 <Box
                     sx={{
                         px: 3,
@@ -324,7 +321,7 @@ export function TicketPurchaseDrawer({
                     <Stack direction='row' sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                         <Box>
                             <Typography variant='body2' color='text.secondary'>
-                                {quantity} × {selectedType.name}
+                                {totalTickets > 0 ? `${totalTickets} ticket${totalTickets > 1 ? 's' : ''} selected` : 'No tickets selected'}
                             </Typography>
                             <Typography variant='h5' sx={{ fontWeight: 800 }}>
                                 €{totalPrice.toFixed(2)}
@@ -335,7 +332,7 @@ export function TicketPurchaseDrawer({
                         variant='contained'
                         fullWidth
                         size='large'
-                        disabled={submitting || !name.trim() || !email.trim()}
+                        disabled={submitting || !canConfirm}
                         onClick={handleConfirmPurchase}
                         sx={{
                             bgcolor: '#06d373',
