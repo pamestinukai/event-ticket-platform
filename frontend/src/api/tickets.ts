@@ -55,3 +55,34 @@ export async function getTicketsByPurchase(purchaseId: number): Promise<import('
     if (!res.ok) throw new Error('Failed to load tickets');
     return res.json();
 }
+
+export interface TicketValidationResponse {
+    ticketId: number;
+    eventTitle: string;
+    eventDate: string;
+    venue: string;
+    buyerName: string;
+    ticketType: string;
+    status: string;
+    token: string;
+}
+
+export async function validateTicket(qrToken: string): Promise<TicketValidationResponse> {
+    const res = await fetch(`${API_BASE_URL}/api/tickets/validate/${encodeURIComponent(qrToken)}`);
+    if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.message ?? 'Invalid ticket');
+    }
+    return res.json();
+}
+
+export async function checkInTicket(qrToken: string): Promise<TicketValidationResponse> {
+    const res = await fetch(`${API_BASE_URL}/api/tickets/check-in/${encodeURIComponent(qrToken)}`, {
+        method: 'POST',
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.message ?? 'Check-in failed');
+    }
+    return res.json();
+}

@@ -1,17 +1,20 @@
 import { useEffect, useState } from "react";
 import { Alert, Box, Button, CircularProgress, Container, Paper, Stack, Typography } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
+import QrCodeScannerIcon from "@mui/icons-material/QrCodeScanner";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { getMyEvents } from "../../api/events";
 import type { EventResponse } from "../../types/EventResponse";
 import { EventCard } from "../../components/EventCard/EventCard";
+import { QrScannerDialog } from "../../components/QrScannerDialog/QrScannerDialog";
 
 export function Dashboard() {
   const { token, email, logout } = useAuth();
   const navigate = useNavigate();
   const [events, setEvents] = useState<EventResponse[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -33,7 +36,17 @@ export function Dashboard() {
             <Typography variant="h4" sx={{ fontWeight: 700 }}>Dashboard</Typography>
             <Typography variant="body2" color="text.secondary">Logged in as <strong>{email}</strong></Typography>
           </Box>
-          <Button variant="outlined" onClick={handleLogout}>Log out</Button>
+          <Stack direction="row" spacing={1}>
+            <Button
+              variant="outlined"
+              startIcon={<QrCodeScannerIcon />}
+              onClick={() => setScannerOpen(true)}
+              sx={{ textTransform: "none" }}
+            >
+              Scan ticket
+            </Button>
+            <Button variant="outlined" onClick={handleLogout}>Log out</Button>
+          </Stack>
         </Stack>
 
         <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", mb: 2 }}>
@@ -83,6 +96,8 @@ export function Dashboard() {
           </Stack>
         )}
       </Container>
+
+      <QrScannerDialog open={scannerOpen} onClose={() => setScannerOpen(false)} />
     </Box>
   );
 }
