@@ -2,6 +2,7 @@ package com.pamestinukai.backend.exceptions;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -56,6 +57,12 @@ public class GlobalExceptionHandler {
                 .orElse("Validation failed");
         ErrorResponse errorResponse = new ErrorResponse(firstError, errors);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleObjectOptimisticLockingFailureException(ObjectOptimisticLockingFailureException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse("This record was modified by someone else." +
+                " Please try again."));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

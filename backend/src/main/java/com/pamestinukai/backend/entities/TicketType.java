@@ -16,6 +16,9 @@ public class TicketType {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long ticketTypeId;
 
+    @Version
+    private Long version;
+
     @ManyToOne
     @JoinColumn(name = "event_id")
     private Event event;
