@@ -23,12 +23,13 @@ export function ConflictDialog({ open, onClose, onRetry }: ConflictDialogProps) 
             <DialogTitle id="alert-dialog-title">Edit conflict</DialogTitle>
             <DialogContent>
                 <DialogContentText id="alert-dialog-description">
-                    Someone else modified this record while you were editing. Refresh to get the latest version or try saving changes again.
+                    Someone else changed this record while you were editing it. Reload to discard your
+                    changes and load their version, or overwrite it with your changes.
                 </DialogContentText>
             </DialogContent>
             <DialogActions>
-                <Button onClick={() => window.location.reload()}>Refresh</Button>
-                <Button onClick={onRetry} autoFocus>Retry</Button>
+                <Button onClick={() => window.location.reload()}>Reload latest</Button>
+                <Button onClick={onRetry} color="error" autoFocus>Overwrite anyway</Button>
             </DialogActions>
         </Dialog>
     );

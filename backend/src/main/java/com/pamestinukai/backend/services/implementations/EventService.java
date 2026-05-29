@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -174,6 +175,7 @@ public class EventService implements IEventService {
     public Event updateEvent(Long id, EventRequestDTO dto) {
         validateEventTime(dto);
         Event event = getEvent(id);
+        assertVersionMatches(dto.getVersion(), event.getVersion(), id);
         Event.EventStatus oldStatus = event.getStatus();
         validateStatusTransition(oldStatus, dto.getStatus());
         LocalDateTime oldStartDatetime = event.getStartDatetime();
@@ -348,6 +350,12 @@ public class EventService implements IEventService {
         if (!allowed.contains(to)) {
             throw new EventStatusException(
                     "Cannot change event status from %s to %s".formatted(from, to));
+        }
+    }
+
+    private void assertVersionMatches(Long clientVersion, Long currentVersion, Long id) {
+        if (clientVersion != null && !clientVersion.equals(currentVersion)) {
+            throw new ObjectOptimisticLockingFailureException(Event.class, id);
         }
     }
 }

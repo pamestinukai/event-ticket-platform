@@ -51,4 +51,6 @@ public class EventRequestDTO {
     @Valid
     @NotEmpty(message = "At least one ticket type is required")
     private List<TicketTypeRequestDTO> ticketTypes;
+
+    private Long version;
 }

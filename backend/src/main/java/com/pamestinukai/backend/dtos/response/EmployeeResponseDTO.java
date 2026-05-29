@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 @Setter
 public class EmployeeResponseDTO {
     private Long id;
+    private Long version;
     private String email;
     private String phone;
     private boolean active;

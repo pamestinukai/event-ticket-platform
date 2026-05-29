@@ -9,6 +9,7 @@ public class TicketTypeResponseMapper {
     public TicketTypeResponseDTO toDTO(TicketType ticketType) {
         TicketTypeResponseDTO dto = new TicketTypeResponseDTO();
         dto.setId(ticketType.getTicketTypeId());
+        dto.setVersion(ticketType.getVersion());
         dto.setName(ticketType.getName());
         dto.setPrice(ticketType.getPrice());
         dto.setTotalQuantity(ticketType.getTotalQuantity());

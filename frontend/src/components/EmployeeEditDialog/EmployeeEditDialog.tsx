@@ -18,8 +18,9 @@ import {
 import AutorenewIcon from "@mui/icons-material/Autorenew";
 import Visibility from "@mui/icons-material/Visibility";
 import VisibilityOff from "@mui/icons-material/VisibilityOff";
-import { updateEmployee } from "../../api/employees";
+import { getEmployees, updateEmployee } from "../../api/employees";
 import type { EmployeeResponse } from "../../types/EmployeeResponse";
+import { ConflictDialog } from "../ConflictDialog/ConflictDialog";
 import { generatePassword } from "../../utils/password";
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -49,19 +50,23 @@ export function EmployeeEditDialog({ open, employee, token, onClose, onSaved }: 
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [version, setVersion] = useState<number | undefined>(undefined);
+  const [conflict, setConflict] = useState(false);
 
   useEffect(() => {
     if (employee) {
       setEmail(employee.email);
       setPhone(employee.phone ?? "");
       setActive(employee.active);
+      setVersion(employee.version);
       setPassword("");
       setShowPassword(false);
       setError(null);
+      setConflict(false);
     }
   }, [employee]);
 
-  async function handleSave() {
+  async function doSave(versionToUse: number | undefined) {
     if (!employee) return;
     if (password && password.length < 8) {
       setError("Password must be at least 8 characters");
@@ -72,19 +77,36 @@ export function EmployeeEditDialog({ open, employee, token, onClose, onSaved }: 
     try {
       const updated = await updateEmployee(
         employee.id,
-        { email, phone: phone || undefined, active, password: password || undefined },
+        { version: versionToUse, email, phone: phone || undefined, active, password: password || undefined },
         token,
       );
       onSaved(updated);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update employee");
+      if (err instanceof Error && err.message === "CONFLICT") {
+        setConflict(true);
+      } else {
+        setError(err instanceof Error ? err.message : "Failed to update employee");
+      }
     } finally {
       setSaving(false);
     }
   }
 
+  async function handleOverwrite() {
+    if (!employee) return;
+    setConflict(false);
+    try {
+      const latest = (await getEmployees(token)).find((e) => e.id === employee.id);
+      setVersion(latest?.version);
+      await doSave(latest?.version);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update employee");
+    }
+  }
+
   return (
+    <>
     <Dialog open={open} onClose={saving ? undefined : onClose} maxWidth="xs" fullWidth>
       <DialogTitle sx={{ fontWeight: 700 }}>Edit employee</DialogTitle>
       <DialogContent>
@@ -141,7 +163,7 @@ export function EmployeeEditDialog({ open, employee, token, onClose, onSaved }: 
         <Button
           variant="contained"
           disableElevation
-          onClick={handleSave}
+          onClick={() => doSave(version)}
           disabled={saving}
           sx={{ textTransform: "none", borderRadius: 1 }}
         >
@@ -149,5 +171,7 @@ export function EmployeeEditDialog({ open, employee, token, onClose, onSaved }: 
         </Button>
       </DialogActions>
     </Dialog>
+    <ConflictDialog open={conflict} onClose={() => setConflict(false)} onRetry={handleOverwrite} />
+    </>
   );
 }

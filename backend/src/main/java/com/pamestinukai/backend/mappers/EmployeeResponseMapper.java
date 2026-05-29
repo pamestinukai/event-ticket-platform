@@ -10,6 +10,7 @@ public class EmployeeResponseMapper {
         EmployeeResponseDTO dto = new EmployeeResponseDTO();
 
         dto.setId(employee.getEmployeeId());
+        dto.setVersion(employee.getVersion());
         dto.setEmail(employee.getEmail());
         dto.setPhone(employee.getPhone());
         dto.setActive(employee.isActive());

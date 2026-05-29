@@ -19,4 +19,5 @@ export interface EventResponse {
     venue : VenueResponse;
     auditoriumName : string;
     categoryName : string;
+    version : number;
 }

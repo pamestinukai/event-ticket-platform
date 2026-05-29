@@ -20,4 +20,6 @@ public class UpdateEmployeeRequestDTO {
 
     @Size(min = 8)
     private String password;
+
+    private Long version;
 }

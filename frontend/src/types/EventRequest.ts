@@ -14,4 +14,5 @@ export interface EventRequest {
     endDatetime : string;
     status : EventType;
     ticketTypes : TicketTypeRequest[];
+    version? : number | null;
 }

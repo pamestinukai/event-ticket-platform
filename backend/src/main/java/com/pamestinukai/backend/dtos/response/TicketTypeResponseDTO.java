@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 @Setter
 public class TicketTypeResponseDTO {
     private Long id;
+    private Long version;
     private String name;
     private BigDecimal price;
     private int totalQuantity;

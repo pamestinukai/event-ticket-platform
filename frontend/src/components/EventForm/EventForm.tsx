@@ -170,6 +170,7 @@ export function EventForm({ initial, submitLabel, onSubmit }: EventFormProps) {
         totalQuantity: Number(t.totalQuantity),
       }));
       await onSubmit({
+        version: initial?.version ?? null,
         organizationId: organizationId!,
         venueId: venueId as number,
         auditoriumId: auditoriumId === "" ? null : (auditoriumId as number),
