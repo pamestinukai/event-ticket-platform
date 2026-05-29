@@ -23,7 +23,7 @@ export function Header() {
 
                 <Box sx={{ display: "flex", gap: 2 }}>
                     <Button sx={{ color: "text.primary" }} onClick={() => navigate("/")}>Events</Button>
-                    <Button sx={{ color: "text.primary" }}>About</Button>
+                    <Button sx={{ color: "text.primary" }} onClick={() => navigate("/about")}>About</Button>
                     <Button variant="contained" onClick={() => navigate(token ? "/dashboard" : "/auth")}>
                         {token ? "Dashboard" : "Sign In"}
                     </Button>
