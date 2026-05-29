@@ -1,8 +1,10 @@
 import { AppBar, Box, Toolbar, Typography, Button } from "@mui/material";
 import {useNavigate} from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 export function Header() {
     const navigate = useNavigate();
+    const { token } = useAuth();
     return (
         <AppBar position="sticky" elevation={0} sx={{
             backgroundColor: "background.paper",
@@ -22,7 +24,9 @@ export function Header() {
                 <Box sx={{ display: "flex", gap: 2 }}>
                     <Button sx={{ color: "text.primary" }} onClick={() => navigate("/")}>Events</Button>
                     <Button sx={{ color: "text.primary" }}>About</Button>
-                    <Button variant="contained" onClick={() => navigate("/auth")}>Sign In</Button>
+                    <Button variant="contained" onClick={() => navigate(token ? "/dashboard" : "/auth")}>
+                        {token ? "Dashboard" : "Sign In"}
+                    </Button>
                 </Box>
 
             </Toolbar>

@@ -11,6 +11,7 @@ import { EventEdit } from './pages/EventEdit/EventEdit';
 import { EventAnalyticsPage } from './pages/EventAnalytics/EventAnalytics';
 import { EventPage } from './pages/Event/Event.tsx';
 import { TicketConfirmationPage } from './pages/TicketConfirmation/TicketConfirmationPage.tsx';
+import { Employees } from './pages/Employees/Employees';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
                 <Route path='/events/new' element={<EventCreate />} />
                 <Route path='/events/:id/edit' element={<EventEdit />} />
                 <Route path='/events/:id/analytics' element={<EventAnalyticsPage />} />
+                <Route path='/employees' element={<Employees />} />
               </Route>
               <Route path='*' element={<Navigate to='/' replace />} />
             </Routes>

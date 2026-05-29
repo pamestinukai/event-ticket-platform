@@ -12,11 +12,11 @@ import java.util.Map;
 @Getter
 @Setter
 public class ErrorResponse {
-    private String errorMessage;
+    private String message;
     private Map<String, String> details;
 
     public ErrorResponse(String message) {
-        this.errorMessage = message;
+        this.message = message;
         this.details = null;
     }
 }

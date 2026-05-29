@@ -4,6 +4,7 @@ import com.pamestinukai.backend.entities.Event;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
@@ -48,5 +49,6 @@ public class EventRequestDTO {
     private Event.EventStatus status;
 
     @Valid
+    @NotEmpty(message = "At least one ticket type is required")
     private List<TicketTypeRequestDTO> ticketTypes;
 }
