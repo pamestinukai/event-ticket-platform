@@ -19,6 +19,9 @@ public class Event {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long eventId;
 
+    @Version
+    private Long version;
+
     @ManyToOne
     @JoinColumn(name = "organization_id")
     private Organization organization;

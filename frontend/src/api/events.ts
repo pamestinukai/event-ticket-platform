@@ -135,6 +135,10 @@ export async function updateEvent(
     },
     body: JSON.stringify(payload),
   });
+  if (res.status === 409) {
+    throw new Error("CONFLICT");
+  }
+
   if (!res.ok) {
     const err = await res.json().catch(() => null);
     throw new Error(err?.message ?? 'Failed to update event');
