@@ -9,6 +9,7 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -18,6 +19,7 @@ import java.util.Arrays;
 
 @Aspect
 @Component
+@ConditionalOnProperty(name = "app.audit.enabled", havingValue = "true", matchIfMissing = true)
 @RequiredArgsConstructor
 @Slf4j
 public class AuditAspect {
@@ -32,7 +34,7 @@ public class AuditAspect {
         String className  = joinPoint.getTarget().getClass().getSimpleName();
         String methodName = joinPoint.getSignature().getName();
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = resolveUsername(auth);
+        String username    = resolveUsername(auth);
         String authorities = resolveAuthorities(auth);
 
         log.info("[AUDIT] user={} roles={} class={} method={} args={}",
@@ -42,23 +44,41 @@ public class AuditAspect {
         Object result = joinPoint.proceed();
 
         if (isMutatingMethod(methodName) && auth != null && auth.getPrincipal() instanceof Employee employee) {
-            persistAuditLog(employee, className, methodName);
+            persistAuditLog(employee, className, methodName, joinPoint.getArgs());
         }
 
         return result;
     }
 
-    private void persistAuditLog(Employee employee, String className, String methodName) {
+    private void persistAuditLog(Employee employee, String className, String methodName, Object[] args) {
         try {
             AuditLog entry = new AuditLog();
             entry.setEmployee(employee);
             entry.setAction(resolveAction(methodName));
+            entry.setEntityType(resolveEntityType(className));
+            entry.setEntityId(resolveEntityId(args));
             entry.setChanges(className + "." + methodName);
             entry.setCreatedAt(LocalDateTime.now());
             auditLogRepository.save(entry);
         } catch (Exception ex) {
             log.error("[AUDIT] Failed to persist audit log for {}.{}: {}", className, methodName, ex.getMessage());
         }
+    }
+
+    private static AuditLog.EntityType resolveEntityType(String className) {
+        if (className.contains("Event"))      return AuditLog.EntityType.EVENT;
+        if (className.contains("TicketType")) return AuditLog.EntityType.TICKET_TYPE;
+        if (className.contains("Auditorium")) return AuditLog.EntityType.AUDITORIUM;
+        if (className.contains("SeatLayout")) return AuditLog.EntityType.SEAT_LAYOUT;
+        return null; // other services (Auth, Employee, Org…) — column is nullable
+    }
+
+    private static Long resolveEntityId(Object[] args) {
+        if (args == null) return null;
+        for (Object arg : args) {
+            if (arg instanceof Long id) return id;
+        }
+        return null;
     }
 
     private static boolean isMutatingMethod(String name) {
@@ -95,7 +115,6 @@ public class AuditAspect {
         return auth.getAuthorities().toString();
     }
 
-
     private static String sanitizeArgs(Object[] args) {
         if (args == null || args.length == 0) return "[]";
         return Arrays.stream(args)
@@ -103,7 +122,6 @@ public class AuditAspect {
                     if (arg == null) return "null";
                     if (arg instanceof byte[]) return "[binary data]";
                     String str = arg.toString();
-                    // Truncate huge args (e.g. DataInitializer payloads)
                     return str.length() > 200 ? str.substring(0, 200) + "…" : str;
                 })
                 .toList()
