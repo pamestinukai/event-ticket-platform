@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import {useEffect, useRef, useState} from "react";
 import { Alert, Box, Button, CircularProgress, Container, Stack, Typography } from "@mui/material";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useNavigate, useParams } from "react-router-dom";
@@ -6,6 +6,8 @@ import { useAuth } from "../../context/AuthContext";
 import { EventForm } from "../../components/EventForm/EventForm";
 import { getEventById, updateEvent } from "../../api/events";
 import type { EventResponse } from "../../types/EventResponse";
+import type {EventRequest} from "../../types/EventRequest.ts";
+import {ConflictDialog} from "../../components/ConflictDialog/ConflictDialog.tsx";
 
 export function EventEdit() {
   const { id } = useParams<{ id: string }>();
@@ -14,6 +16,7 @@ export function EventEdit() {
   const [event, setEvent] = useState<EventResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isConflict, setIsConflict] = useState(false);
+  const lastPayloadRef = useRef<EventRequest | null>(null);
 
   useEffect(() => {
     if (!id || !token) return;
@@ -21,6 +24,27 @@ export function EventEdit() {
       .then(setEvent)
       .catch((err) => setError(err.message));
   }, [id, token]);
+
+  const handleSubmit = async (payload: EventRequest) => {
+    if (!token || !id) return;
+    lastPayloadRef.current = payload;
+    try {
+      await updateEvent(id, payload, token);
+      navigate("/dashboard");
+    } catch (err: any) {
+      if (err.status === 409 || err.message?.toLowerCase().includes("conflict")) {
+        setIsConflict(true);
+      } else {
+        setError(err.message);
+      }
+    }
+  };
+
+  const handleRetry = async () => {
+    if (!lastPayloadRef.current) return;
+    setIsConflict(false);
+    await handleSubmit(lastPayloadRef.current);
+  };
 
   return (
     <Box sx={{ minHeight: "100vh", py: 6 }}>
@@ -34,19 +58,11 @@ export function EventEdit() {
 
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-        {isConflict && (
-            <Alert
-                severity="warning"
-                sx={{ mb: 2 }}
-                action={
-                  <Button color="inherit" size="small" onClick={() => window.location.reload()}>
-                    Refresh
-                  </Button>
-                }
-            >
-              Someone else modified this event while you were editing. Refresh to get the latest version.
-            </Alert>
-        )}
+        <ConflictDialog
+            open={isConflict}
+            onClose={() => setIsConflict(false)}
+            onRetry={handleRetry}
+        />
 
         {!event && !error && (
           <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
@@ -58,20 +74,7 @@ export function EventEdit() {
           <EventForm
             initial={event}
             submitLabel="Save changes"
-            onSubmit={async (payload) => {
-              if (!token || !id) return;
-              try{
-                await updateEvent(id, payload, token);
-                navigate("/dashboard");
-              } catch (err: any){
-                if (err.status === 409 || err.message?.toLowerCase().includes("conflict")) {
-                  setIsConflict(true);
-                }
-                else{
-                  setError(err.message);
-                }
-              }
-            }}
+            onSubmit={handleSubmit}
           />
         )}
       </Container>

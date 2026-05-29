@@ -24,6 +24,9 @@ public class Employee implements UserDetails {
     @JoinColumn(name = "organization_id")
     private Organization organization;
 
+    @Version
+    private Long version;
+
     @Column(unique = true, nullable = false)
     private String email;
 
