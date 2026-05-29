@@ -13,6 +13,7 @@ export function EventEdit() {
   const navigate = useNavigate();
   const [event, setEvent] = useState<EventResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isConflict, setIsConflict] = useState(false);
 
   useEffect(() => {
     if (!id || !token) return;
@@ -33,6 +34,20 @@ export function EventEdit() {
 
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
+        {isConflict && (
+            <Alert
+                severity="warning"
+                sx={{ mb: 2 }}
+                action={
+                  <Button color="inherit" size="small" onClick={() => window.location.reload()}>
+                    Refresh
+                  </Button>
+                }
+            >
+              Someone else modified this event while you were editing. Refresh to get the latest version.
+            </Alert>
+        )}
+
         {!event && !error && (
           <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
             <CircularProgress />
@@ -45,8 +60,17 @@ export function EventEdit() {
             submitLabel="Save changes"
             onSubmit={async (payload) => {
               if (!token || !id) return;
-              await updateEvent(id, payload, token);
-              navigate("/dashboard");
+              try{
+                await updateEvent(id, payload, token);
+                navigate("/dashboard");
+              } catch (err: any){
+                if (err.status === 409 || err.message?.toLowerCase().includes("conflict")) {
+                  setIsConflict(true);
+                }
+                else{
+                  setError(err.message);
+                }
+              }
             }}
           />
         )}
