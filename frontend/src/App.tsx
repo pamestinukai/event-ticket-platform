@@ -12,6 +12,7 @@ import { EventAnalyticsPage } from './pages/EventAnalytics/EventAnalytics';
 import { EventPage } from './pages/Event/Event.tsx';
 import { TicketConfirmationPage } from './pages/TicketConfirmation/TicketConfirmationPage.tsx';
 import { Employees } from './pages/Employees/Employees';
+import { AboutPage } from './pages/About/About';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
               <Route path='/auth' element={<Auth />} />
               <Route path='/event/:id' element={<EventPage />} />
               <Route path='/ticket/confirmation' element={<TicketConfirmationPage />} />
+              <Route path='/about' element={<AboutPage />} />
               <Route element={<ProtectedLayout />}>
                 <Route path='/dashboard' element={<Dashboard />} />
                 <Route path='/events/new' element={<EventCreate />} />
