@@ -77,6 +77,8 @@ public class TicketService implements ITicketService {
       List<Ticket> tickets = createReservedTickets(dto.getTickets(), ticketTypeMap, purchase);
       ticketRepository.saveAll(tickets);
       BigDecimal totalPrice = calculatePrice(dto.getTickets(), ticketTypeMap);
+      purchase.setTotalAmount(totalPrice);
+      purchase = purchaseRepository.save(purchase);
 
       log.info("Tickets reserved");
       return ticketMapper.toReservationResponseDTO(dto, event, ticketTypeMap, purchase, totalPrice);

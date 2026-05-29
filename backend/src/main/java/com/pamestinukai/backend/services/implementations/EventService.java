@@ -146,7 +146,11 @@ public class EventService implements IEventService {
     public Page<Event> getEvents(EventFilterRequestDTO filter) {
         if (StringUtils.hasText(filter.getPerformer())) {
             Pageable pageable = PageRequest.of(filter.getPage(), filter.getSize());
-            return eventRepository.findByPerformer(filter.getPerformer(), pageable);
+
+            List<String> statuses = PURCHASABLE_STATUSES.stream()
+                    .map(Enum::name)
+                    .toList();
+            return eventRepository.findByPerformer(filter.getPerformer(), statuses, pageable);
         }
         Specification<Event> spec = buildSpec(filter);
         Sort sort = buildSort(filter.getSortBy(), filter.getSortDir());

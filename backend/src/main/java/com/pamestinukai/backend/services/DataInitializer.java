@@ -160,7 +160,10 @@ public class DataInitializer implements CommandLineRunner {
         event1.setAuditorium(aud1);
         event1.setCategory(music);
         event1.setPerformers(List.of("Rammstein", "Metallica"));
-        event1.setImages(List.of("rock_night_1.jpg", "rock_night_2.jpg"));
+        event1.setImages(List.of("https://cincymusic.imgix.net/articles/HvZKiMl5xbA8FiTVTlaPOuCzh9WmbT8ml5KDVcLH.jpg?auto=compress%2Cformat&cs=srgb&fit=max&h=1200&w=1200&s=1d423baff9c9bc6a298f8b8ba5ce5c2f",
+                                 "https://png.pngtree.com/background/20250823/original/pngtree-blue-lit-concert-stage-with-crowd-enjoying-live-performance-picture-image_17388667.jpg",
+                                 "https://madisonorpheum.com/wp-content/uploads/sites/3/2026/04/Mavericks-Orpheum-WEB.jpg"
+        ));
         event1.setStatus(Event.EventStatus.PUBLISHED);
         event1.setStartDatetime(LocalDateTime.now().plusDays(30));
         event1.setEndDatetime(LocalDateTime.now().plusDays(30).plusHours(4));
@@ -176,7 +179,10 @@ public class DataInitializer implements CommandLineRunner {
         event2.setAuditorium(aud3);
         event2.setCategory(sports);
         event2.setPerformers(List.of("Žalgiris", "Rytas"));
-        event2.setImages(List.of("basketball_1.jpg"));
+        event2.setImages(List.of(
+                "https://gray-wkyt-prod.gtv-cdn.com/resizer/v2/E76SNNOGJNATVBTY5SIISEU3KU.jpg?auth=878ccd80eed9933639ce961edff527ab82f6d780f53fb2394f4f1080708c41f1&width=1200&height=600&smart=true",
+                "https://s.yimg.com/ny/api/res/1.2/33p7ikAUnIYHhhvsDkbalw--/YXBwaWQ9aGlnaGxhbmRlcjt3PTEyMDA7aD02MDA7Y2Y9d2VicA--/https://d29szjachogqwa.cloudfront.net/images/user-uploaded/ED_012626_NBAAllStarReserves_%282%29.jpg"
+        ));
         event2.setStatus(Event.EventStatus.PUBLISHED);
         event2.setStartDatetime(LocalDateTime.now().plusDays(15));
         event2.setEndDatetime(LocalDateTime.now().plusDays(15).plusHours(2));
@@ -192,7 +198,10 @@ public class DataInitializer implements CommandLineRunner {
         event3.setAuditorium(aud2);
         event3.setCategory(theater);
         event3.setPerformers(List.of("National Drama Theatre"));
-        event3.setImages(List.of("hamlet_1.jpg", "hamlet_2.jpg"));
+        event3.setImages(List.of(
+                "https://cloudimages2.broadwayworld.com/columnpiccloud/Review-SCARAMOUCHE-at-City-Lit-Theater-1778408073.jpg?format=auto&width=1200",
+                "https://images.ctfassets.net/6pezt69ih962/1gmnGldzDW78vyhLPEDyDL/003df1ec20f5e206617ce3f5a3263e12/Hamlet-1200-310122.jpg"
+        ));
         event3.setStatus(Event.EventStatus.DRAFT);
         event3.setStartDatetime(LocalDateTime.now().plusDays(60));
         event3.setEndDatetime(LocalDateTime.now().plusDays(60).plusHours(3));

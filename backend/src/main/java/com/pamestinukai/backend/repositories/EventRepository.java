@@ -23,6 +23,7 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
         SELECT 1 FROM unnest(performers) p
         WHERE lower(p) LIKE lower(concat('%', :performer, '%'))
     )
+    AND status IN (:statuses)
     """, nativeQuery = true)
-    Page<Event> findByPerformer(@Param("performer") String performer, Pageable pageable);
+    Page<Event> findByPerformer(@Param("performer") String performer, @Param("statuses") List<String> statuses, Pageable pageable);
 }
