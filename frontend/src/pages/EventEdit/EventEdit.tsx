@@ -41,9 +41,19 @@ export function EventEdit() {
   };
 
   const handleRetry = async () => {
-    if (!lastPayloadRef.current) return;
+    if (!lastPayloadRef.current || !token || !id) return;
     setIsConflict(false);
-    await handleSubmit(lastPayloadRef.current);
+    try {
+      const latest = await getEventById(id, token);
+      await updateEvent(id, { ...lastPayloadRef.current, version: latest.version }, token);
+      navigate("/dashboard");
+    } catch (err: any) {
+      if (err.status === 409 || err.message?.toLowerCase().includes("conflict")) {
+        setIsConflict(true);
+      } else {
+        setError(err.message);
+      }
+    }
   };
 
   return (

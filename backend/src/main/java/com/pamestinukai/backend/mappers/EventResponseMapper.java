@@ -20,6 +20,7 @@ public class EventResponseMapper {
     public EventResponseDTO toDTO(Event event){
         EventResponseDTO dto = new EventResponseDTO();
         dto.setEventId(event.getEventId());
+        dto.setVersion(event.getVersion());
         dto.setTitle(event.getTitle());
         dto.setDescription(event.getDescription());
         dto.setPerformers(event.getPerformers());

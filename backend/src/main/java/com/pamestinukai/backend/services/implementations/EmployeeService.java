@@ -8,6 +8,7 @@ import com.pamestinukai.backend.exceptions.ResourceNotFoundException;
 import com.pamestinukai.backend.repositories.EmployeeRepository;
 import com.pamestinukai.backend.services.interfaces.IEmployeeService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,6 +53,10 @@ public class EmployeeService implements IEmployeeService {
         if (employee.getOrganization() == null
                 || !employee.getOrganization().getOrganizationId().equals(organization.getOrganizationId())) {
             throw new ResourceNotFoundException("Employee not found");
+        }
+
+        if (request.getVersion() != null && !request.getVersion().equals(employee.getVersion())) {
+            throw new ObjectOptimisticLockingFailureException(Employee.class, employeeId);
         }
 
         boolean isOwner = organization.getOwner() != null

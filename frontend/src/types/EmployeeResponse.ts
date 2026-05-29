@@ -5,4 +5,5 @@ export interface EmployeeResponse {
   active: boolean;
   owner: boolean;
   createdAt: string;
+  version: number;
 }

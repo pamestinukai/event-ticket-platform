@@ -12,6 +12,7 @@ import java.util.List;
 @Setter
 public class EventResponseDTO {
     private Long eventId;
+    private Long version;
     private String title;
     private String description;
     private List<String> performers;
